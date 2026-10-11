@@ -383,5 +383,16 @@ def create_app(test_config=None):
     return app
 
 
+def __getattr__(name):
+    """`gunicorn app:app` (стандартная команда Render) получает приложение при первом обращении.
+
+    Лениво — чтобы простой импорт create_app (тесты, скрипты) не создавал базу и не читал библиотеки.
+    """
+    if name == "app":
+        globals()["app"] = create_app()
+        return globals()["app"]
+    raise AttributeError(f"module 'app' has no attribute {name!r}")
+
+
 if __name__ == "__main__":
     create_app().run(host="127.0.0.1", port=int(os.environ.get("PORT", 5000)), debug=False)
