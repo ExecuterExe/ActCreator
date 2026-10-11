@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Шаг 5 из 5. Ваш выбор — АктКреватор{% endblock %}
+{% block content %}
+<h1>Шаг 5 из 5. Ваш выбор</h1>
+<p>Отметьте <b>две</b> идеи, которые вы сами считаете самыми необычными. Не самые реалистичные — именно самые необычные.</p>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% for idea in ideas %}
+    <label><input type="checkbox" name="pick" value="{{ loop.index0 }}"> {{ idea.text }}</label>
+  {% endfor %}
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <p><button type="submit">Показать разбор</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Ваш разбор — АктКреватор{% endblock %}
+{% block content %}
+<h1>Ваш разбор</h1>
+
+{% if r.n_ideas == 0 %}
+  <p>Вы не записали ни одной идеи — такое бывает. Разбора не получится, но ваши ответы в анкете сохранены.</p>
+{% else %}
+
+<div class="box">
+  <p style="font-size:1.25em"><b>{{ r.n_ideas }}</b> {{ 'идея' if r.n_ideas == 1 else ('идеи' if r.n_ideas < 5 else 'идей') }}
+    → <b>{{ r.n_families }}</b> {{ 'разный подход' if r.n_families == 1 else ('разных подхода' if r.n_families < 5 else 'разных подходов') }}</p>
+  <p class="muted">Количество идей и число разных подходов — разные вещи. Пять вариантов скидки — это пять идей, но один подход.
+  {% if r.avg_families_others %}У других участников в среднем {{ '%.1f' % r.avg_families_others }}.{% endif %}</p>
+</div>
+
+<h2>1. Облако очевидного</h2>
+<p><b>{{ r.common_count }} из {{ r.n_ideas }}</b> ваших идей — из направлений, которые предлагают чаще всего.
+{% if r.common_source == 'seed' %}
+  <span class="muted">До вас тест прошли {{ r.n_respondents }} чел. — пока этого мало, поэтому «частые направления» — это стартовая оценка команды. Когда ответов станет больше, оценка будет считаться по реальным данным.</span>
+{% else %}
+  <span class="muted">Посчитано по ответам {{ r.n_respondents }} участников.</span>
+{% endif %}</p>
+
+<table>
+  <tr><th>Ваша идея</th><th>Подход</th><th></th></tr>
+  {% for i in r.ideas %}
+    <tr>
+      <td>{{ loop.index }}. {{ i.text }}</td>
+      <td>{{ i.family_name or '—' }}</td>
+      <td>
+        {% if not i.family %}<span class="rare">не распознано — возможно, нестандартный ход</span>
+        {% elif i.common %}<span class="common">частый ход</span>
+        {% else %}<span class="rare">редкий ход</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+{% if r.n_unknown %}
+  <p class="muted">«Не распознано» значит, что наш словарь не отнёс идею ни к одному типовому направлению. Это может быть действительно необычная идея — а может быть просто непривычная формулировка. Автоматическая оценка пока грубая.</p>
+{% endif %}
+
+<h2>2. Где прятались необычные идеи</h2>
+{% if r.first_is_common %}
+  <p>Ваша первая идея — из облака очевидного. Так происходит почти у всех: в исследованиях первые ответы в таких заданиях обычно самые типичные, а более оригинальные появляются позже, когда очевидное уже «выгружено».</p>
+{% else %}
+  <p>Ваша первая идея сразу оказалась не из самых частых направлений. Обычно бывает наоборот: первые ответы — самые типичные.</p>
+{% endif %}
+{% if r.first_uncommon_pos and r.first_uncommon_pos > 1 %}
+  <p>Первая нетипичная идея появилась у вас на <b>{{ r.first_uncommon_pos }}-м</b> месте.</p>
+{% endif %}
+{% if r.halves %}
+  <p class="muted">Доля типичных идей: в первой половине списка — {{ (r.halves.first_common_share * 100)|round|int }}%, во второй — {{ (r.halves.second_common_share * 100)|round|int }}%.</p>
+{% endif %}
+<p class="muted">Именно поэтому тренировка в АктКреваторе начинается с того, что вы сначала записываете очевидное — чтобы оно не мешало дальше.</p>
+
+{% if r.top2 %}
+<h2>3. Ваш выбор и наша оценка</h2>
+<p>Вы назвали самыми необычными:</p>
+<ul>
+  {% for i in r.top2 %}
+    <li>{{ i.text }} —
+      {% if not i.family %}<span class="rare">не распознано словарём</span>
+      {% elif i.common %}<span class="common">по нашей оценке, частый ход</span>
+      {% else %}<span class="rare">по нашей оценке, редкий ход</span>{% endif %}
+    </li>
+  {% endfor %}
+</ul>
+<p class="muted">Умение придумывать идеи и умение замечать среди них самые необычные — разные навыки. Если ваш выбор и оценка расходятся, это не ошибка, а повод присмотреться.</p>
+{% endif %}
+
+<h2>4. Незанятые пространства</h2>
+<p>Направления, которых вы не коснулись. Попробуйте прямо сейчас мысленно решить задачу через одно из них:</p>
+<ul>
+  {% for f in r.untouched %}
+    <li><b>{{ f.name }}.</b> {{ f.explain }}</li>
+  {% endfor %}
+</ul>
+
+<details>
+  <summary>Полная карта направлений</summary>
+  <table>
+    <tr><th>Направление</th><th>Ваших идей</th><th>Как часто встречается</th></tr>
+    {% for f in r.family_map %}
+      <tr>
+        <td>{{ f.name }}</td>
+        <td>{{ f.count or '—' }}</td>
+        <td>{% if f.share is not none %}{{ (f.share * 100)|round|int }}% участников{% elif f.common %}частое (стартовая оценка){% else %}редкое (стартовая оценка){% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</details>
+{% endif %}
+
+<div class="box">
+  <p class="muted">Важно: это снимок одной задачи за 3 минуты, а не измерение креативности как черты характера. Оценка автоматическая и предварительная. Ваши ответы сохранены — к ним можно будет вернуться, чтобы сравнить.</p>
+</div>
+
+<h2>Был ли разбор полезен?</h2>
+{% if feedback %}
+  <p>Спасибо, ваш ответ сохранён.</p>
+{% else %}
+<form method="post" action="{{ url_for('test_feedback') }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <fieldset>
+    <legend>Насколько разбор был для вас полезен?</legend>
+    {% for v in ['1','2','3','4','5'] %}
+      <label style="display:inline-block;margin-right:12px"><input type="radio" name="useful" value="{{ v }}"> {{ v }}</label>
+    {% endfor %}
+    <p class="muted">1 — бесполезно, 5 — очень полезно</p>
+  </fieldset>
+  <fieldset>
+    <legend>Что удивило? Можно выбрать несколько.</legend>
+    {% for value, label in surprise_options %}
+      <label><input type="checkbox" name="surprise" value="{{ value }}"> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+  <label>Что-то ещё? <span class="muted">(необязательно)</span>
+    <input type="text" name="comment" maxlength="1000">
+  </label>
+  <p><button type="submit">Отправить</button></p>
+</form>
+{% endif %}
+
+<div class="box">
+  <p>{{ ui("UI-001") }}</p>
+  <p><a class="button" href="{{ url_for('train.start', src='test') }}">{{ ui("UI-002") }}</a>
+     <a href="{{ url_for('train.start', src='test') }}">{{ ui("UI-003") }}</a>
+     <a href="{{ url_for('me') }}">{{ ui("UI-004") }}</a></p>
+</div>
+{% endblock %}

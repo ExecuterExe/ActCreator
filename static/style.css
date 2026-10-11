@@ -1,0 +1,22 @@
+/* Намеренно минимально: дизайн обсуждаем позже. */
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 720px; margin: 0 auto; padding: 16px; color: #111; background: #fff; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 16px; }
+header a { color: inherit; }
+nav { display: flex; gap: 12px; align-items: center; }
+form.inline { display: inline; }
+button.link { background: none; border: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+label { display: block; margin: 4px 0; }
+fieldset { border: 1px solid #ccc; margin: 0 0 16px; padding: 8px 12px; }
+legend { font-weight: 600; }
+input[type=text], input[type=password], textarea { width: 100%; box-sizing: border-box; padding: 6px; font: inherit; }
+textarea { min-height: 240px; }
+button, .button { font: inherit; padding: 8px 16px; cursor: pointer; }
+.error { color: #b00020; }
+.flash { background: #eef6ee; padding: 8px; }
+.muted { color: #555; font-size: 0.92em; }
+.timer { font-size: 1.6em; font-weight: 600; }
+.box { border: 1px solid #ccc; padding: 12px; margin: 12px 0; }
+.common { color: #8a5a00; }
+.rare { color: #00602b; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border-bottom: 1px solid #ddd; padding: 4px 6px; text-align: left; vertical-align: top; }

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Пробный период — АктКреватор{% endblock %}
+{% block content %}
+<h1>Пробный период</h1>
+<p>{{ ui("UI-160", **{"идей в банке": ideas ~ " идей в банке", "замеченные шаблоны": "замеченные шаблоны", "проверки": "проверки идей"}) }}</p>
+<p>{{ ui("UI-161") }}</p>
+<p>{{ ui("UI-162") }}</p>
+{% if clicked %}
+  <div class="box">{{ ui("UI-163") }}</div>
+{% else %}
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <p><button type="submit">Оформить доступ</button></p>
+  </form>
+{% endif %}
+<p><a href="{{ url_for('between.bank') }}">Мои идеи</a></p>
+{% endblock %}

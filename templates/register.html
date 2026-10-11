@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — АктКреватор{% endblock %}
+{% block content %}
+<h1>Регистрация</h1>
+<p class="muted">Нужны только логин и пароль. Почта и имя не нужны.</p>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Логин
+    <input type="text" name="login" value="{{ login_value }}" autocomplete="username" required>
+  </label>
+  {% if errors.login %}<p class="error">{{ errors.login }}</p>{% endif %}
+
+  <label>Пароль (не короче 8 символов)
+    <input type="password" name="password" autocomplete="new-password" required>
+  </label>
+  {% if errors.password %}<p class="error">{{ errors.password }}</p>{% endif %}
+
+  <label>Пароль ещё раз
+    <input type="password" name="password2" autocomplete="new-password" required>
+  </label>
+  {% if errors.password2 %}<p class="error">{{ errors.password2 }}</p>{% endif %}
+
+  <label>
+    <input type="checkbox" name="consent" value="1">
+    Согласен(на), что мои ответы в обезличенном виде используются командой АктКреватора для исследования.
+  </label>
+  {% if errors.consent %}<p class="error">{{ errors.consent }}</p>{% endif %}
+
+  <p><button type="submit">Зарегистрироваться</button></p>
+</form>
+<p>Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a></p>
+{% endblock %}

@@ -1,0 +1,6 @@
+# Секретный ключ и локальные данные
+settings.env
+instance/
+exports/
+.venv/
+__pycache__/

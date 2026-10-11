@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Контрольная точка — АктКреватор{% endblock %}
+{% block content %}
+<h1>Контрольная точка</h1>
+<div class="box"><p><b>{{ task.text }}</b></p></div>
+{% if instruction %}<p>{{ instruction }}</p>{% endif %}
+<p class="timer">Осталось: <span id="timer"></span></p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" id="cp-form">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <textarea name="ideas" rows="12" autofocus></textarea>
+  <p><button type="submit">Готово</button></p>
+</form>
+<script>
+(function () {
+  var left = {{ remaining }}, out = document.getElementById('timer');
+  function tick() {
+    var m = Math.floor(left / 60), s = left % 60;
+    out.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (left <= 0) { out.textContent = 'время вышло — отправьте то, что успели'; return; }
+    left -= 1; setTimeout(tick, 1000);
+  }
+  tick();
+})();
+</script>
+{% endblock %}

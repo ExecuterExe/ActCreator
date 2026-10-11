@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Индекс первой мысли — АктКреватор{% endblock %}
+{% block content %}
+<h1>Контрольная точка</h1>
+<p class="muted">{{ task.text }}</p>
+<p><b>{{ summary }}</b></p>
+{% if m.first_uncommon_pos %}<p>Первая нетипичная идея — {{ m.first_uncommon_pos }}-я по счёту.</p>
+{% else %}<p>Нетипичных идей в этот раз не было.</p>{% endif %}
+{% if m.n_unknown %}<p class="muted">Не удалось отнести к направлениям: {{ m.n_unknown }} — словарь видит не всё.</p>{% endif %}
+{% if r.repeat %}<p class="muted">{{ ui("UI-152") }}</p>{% endif %}
+{% if r.late %}<p class="muted">Ответ отправлен позже 3 минут — точка помечена.</p>{% endif %}
+<p class="muted">{% if r.common_source == "data" %}{{ ui("UI-048", N=r.n_basis) }}{% else %}{{ ui("UI-047") }}{% endif %}</p>
+
+<h2>Ваши идеи</h2>
+<ul>{% for i in r.ideas %}<li>{{ i.text }}{% if i.family %} — <span class="muted">{{ "частое" if i.common else "редкое" }} направление</span>{% endif %}</li>{% endfor %}</ul>
+
+<h2>Точки</h2>
+<table>
+  <tr><th>Когда</th><th>Замер</th><th>Идей</th><th>Редких направлений</th></tr>
+  {% for p in points %}
+    <tr><td>{{ p.date.strftime("%d.%m.%Y") if p.date else "—" }}</td>
+      <td>{{ p.label }}{% if p.base %} <span class="muted">(другая задача и разметка — сравнение предварительное)</span>{% endif %}{% if p.repeat %} <span class="muted">(повтор)</span>{% endif %}</td>
+      <td>{{ p.n_ideas }}</td><td>{{ p.ipm }}</td></tr>
+  {% endfor %}
+</table>
+<p><b>{{ comment }}</b></p>
+<p><a href="{{ url_for('me') }}">В кабинет</a></p>
+{% endblock %}

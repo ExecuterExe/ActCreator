@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Кабинет — АктКреватор{% endblock %}
+{% block content %}
+<h1>Кабинет</h1>
+
+{% if attempt and attempt['step'] == 'done' %}
+  <p>Входной тест пройден. <a href="{{ url_for('test_result') }}">Посмотреть разбор</a></p>
+{% elif attempt %}
+  <p>Вы начали входной тест. <a href="{{ url_for('test_start') }}">Продолжить</a></p>
+{% else %}
+  <p><a class="button" href="{{ url_for('test_start') }}">Пройти входной тест</a> (около 7 минут)</p>
+{% endif %}
+
+{% if questions %}
+  <h2>{{ ui("UI-158", n=n_questions) }}</h2>
+  {% for qn in questions %}
+    <form method="post" action="{{ url_for('between.outcome', sid=qn.sid, day=qn.day) }}" class="box">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ url_for('me') }}">
+      <p><b>{{ qn.question }}</b></p>
+      {% for opt in qn.options %}<label><input type="radio" name="status" value="{{ opt }}"> {{ opt }}</label><br>{% endfor %}
+      {% if qn.day == 7 %}
+        <p class="muted">{{ ui("UI-132").split("?")[0] }}?
+          <select name="reason"><option value="">—</option>{% for r in refuse %}<option>{{ r }}</option>{% endfor %}</select></p>
+      {% endif %}
+      {% if qn.day == 30 %}<p class="muted">{{ ui("UI-135") }}</p>{% endif %}
+      <label>{% if qn.day == 2 %}Что получилось?{% else %}Комментарий{% endif %} (необязательно)
+        <input type="text" name="text" maxlength="500"></label>
+      <button type="submit">Ответить</button>
+    </form>
+  {% endfor %}
+  {% if n_questions > 3 %}<p class="muted">Остальные вопросы — в <a href="{{ url_for('between.bank') }}">банке идей</a>.</p>{% endif %}
+{% endif %}
+
+<h2>Тренировки</h2>
+{% if open_session %}
+  <p>У вас есть незаконченная тренировка. <a href="{{ url_for('train.session_home', sid=open_session['id']) }}">Продолжить</a></p>
+{% endif %}
+{% if attempt and attempt['step'] == 'done' and n_done == 0 and not open_session %}
+  <div class="box">
+    <p>{{ ui("UI-001") }}</p>
+    <p><a class="button" href="{{ url_for('train.start', src='test') }}">{{ ui("UI-002") }}</a>
+       <a href="{{ url_for('train.start', src='test') }}">{{ ui("UI-003") }}</a>
+       <span class="muted">· {{ ui("UI-004") }} — можно вернуться в любой момент.</span></p>
+  </div>
+{% else %}
+  <p><a class="button" href="{{ url_for('train.start') }}">Начать тренировку</a></p>
+{% endif %}
+<p class="muted">
+  {% if access.full %}Полный доступ (режим пилота).
+  {% elif access.paid %}Платный доступ.
+  {% elif access.allowed %}{{ ui("UI-159", n=access.used, дата=(access.until.strftime("%d.%m") if access.until else "7 дней от первой тренировки")) }}
+  {% else %}Пробные тренировки закончились. <a href="{{ url_for('train.paywall') }}">Что дальше</a>{% endif %}
+</p>
+<p>Завершённых тренировок: {{ n_done }}. <a href="{{ url_for('between.bank') }}">Банк идей</a>
+  · <a href="{{ url_for('between.summary') }}">Итог месяца</a>
+  {% if access.full or access.paid %}· <a href="{{ url_for('between.checkpoint_intro') }}">Контрольные точки</a>{% endif %}</p>
+
+{% if open_cp %}
+  <div class="box"><p>Контрольная точка начата. <a href="{{ url_for('between.checkpoint_task', cid=open_cp['id']) }}">Продолжить</a></p></div>
+{% elif cp and cp.due and (access.full or access.paid) %}
+  <div class="box">
+    <p>{{ ui("UI-145") }}</p>
+    {% if cp.postpones >= 2 %}<p class="muted">{{ ui("UI-147") }}</p>{% endif %}
+    <form method="post" action="{{ url_for('between.checkpoint_start') }}" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="src" value="checkpoint_invite">
+      <button type="submit">Начать (3 минуты)</button>
+    </form>
+    <form method="post" action="{{ url_for('between.checkpoint_postpone') }}" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button type="submit" class="link">{{ ui("UI-146") }}</button>
+    </form>
+  </div>
+{% endif %}
+
+<h2>Самостоятельность</h2>
+<p>Уровень: {{ state["level"] }} из 3.</p>
+<form method="post" action="{{ url_for('between.level_change') }}" class="inline">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% set opts = ui("UI-139").split(" · ") %}
+  {% if state["level"] < 3 %}<button type="submit" name="direction" value="up">{{ opts[0] }}</button>{% endif %}
+  {% if state["level"] > 1 %}<button type="submit" name="direction" value="down">{{ opts[1] }}</button>{% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Карточка ресурсов — АктКреватор{% endblock %}
+{% block content %}
+<h1>Карточка ресурсов</h1>
+<p>{{ ui("UI-006") }}</p>
+{% if kind == "short" %}<p class="muted">Это короткая версия. <a href="{{ url_for('train.card', kind='full', next=request.args.get('next', '')) }}">Заполнить полную</a> — тогда критика будет точнее.</p>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="kind" value="{{ kind }}">
+  {% for f in fields %}
+    <fieldset>
+      <legend>{{ f.label }}</legend>
+      {% set v = values.get(f.id) %}
+      {% if f.type == "text" %}
+        <input type="text" name="{{ f.id }}" value="{{ v or '' }}" maxlength="500">
+      {% else %}
+        {% for opt in f.options %}
+          <label>
+            {% if f.type == "multi" %}<input type="checkbox" name="{{ f.id }}" value="{{ opt }}" {% if v and opt in v %}checked{% endif %}>
+            {% else %}<input type="radio" name="{{ f.id }}" value="{{ opt }}" {% if v == opt %}checked{% endif %}>{% endif %}
+            {{ opt }}
+          </label>
+        {% endfor %}
+        {% if f.with_text %}<input type="text" name="{{ f.id }}_text" value="{{ values.get(f.id ~ '_text', '') }}" placeholder="Пояснение (необязательно)" maxlength="300">{% endif %}
+      {% endif %}
+      {% if errors.get(f.id) %}<p class="error">{{ errors[f.id] }}</p>{% endif %}
+    </fieldset>
+  {% endfor %}
+  {% if need_notice %}
+    <div class="box">
+      <p>{{ ui("UI-010") }}</p>
+      <label><input type="checkbox" name="ai_notice" value="1"> {{ ui("UI-011") }}</label>
+      {% if errors.ai_notice %}<p class="error">{{ errors.ai_notice }}</p>{% endif %}
+    </div>
+  {% endif %}
+  <p><button type="submit">Сохранить</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Своя идея — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>Своя идея</h1>
+<div class="box">
+  <p><b>{{ tool.name }}.</b> {{ tool.task_text }}</p>
+  {% if tool.extra %}<p>{{ tool.extra }}</p>{% endif %}
+  {% if tool.header %}<p class="muted">{{ tool.header }}</p>{% endif %}
+</div>
+
+{% if flags.retry_used %}<p class="muted">Ещё 3 минуты с тем же заданием. Прошлая идея сохранена в банке.</p>{% endif %}
+{% if refusal %}
+  <div class="box">
+    <p>{{ ui("UI-082") }}</p>
+    <p>{{ ui("UI-083") }}</p>
+  </div>
+{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if multi %}
+  <p>{{ ui("UI-081") }}</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="pick">
+    {% for item in multi %}<label><input type="radio" name="chosen" value="{{ loop.index0 }}"> {{ item }}</label><br>{% endfor %}
+    <p><button type="submit">Проверим эту</button></p>
+  </form>
+{% else %}
+
+{% if hints %}
+  <h2>Подсказки</h2>
+  <ul>{% for h in hints %}<li><b>{{ hint_names[h.kind] }}:</b> {{ h.text }}</li>{% endfor %}</ul>
+{% endif %}
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>{{ ui("UI-074") }}
+    <textarea name="idea" rows="5" maxlength="{{ 600 }}">{{ text or "" }}</textarea></label>
+
+  {% if self_check_needed %}
+    <fieldset>
+      <legend>{{ ui("UI-080") }}</legend>
+      <label><input type="radio" name="self_check" value="yes" {% if self_check == "yes" %}checked{% endif %}> Да</label>
+      <label><input type="radio" name="self_check" value="no" {% if self_check == "no" %}checked{% endif %}> Нет</label>
+    </fieldset>
+  {% endif %}
+  {% if confirm_needed %}
+    <p class="error">Тогда идея обходит то, от чего мы отказались, — сдвига может не получиться. Попробуйте изменить её или отправьте как есть.</p>
+    <label><input type="checkbox" name="confirm" value="1"> Отправить как есть</label>
+  {% endif %}
+
+  <p>
+    <button type="submit" name="action" value="submit">Отправить идею</button>
+    <button type="submit" name="action" value="draft">Сохранить черновик</button>
+  </p>
+
+  <p>{{ ui("UI-075", n=left) }}</p>
+  {% if left > 0 %}
+    <p>{% for k, name in hint_names.items() %}<button type="submit" name="hint" value="{{ k }}">{{ name }}</button> {% endfor %}</p>
+    <p class="muted">{{ ui("UI-076") }}</p>
+  {% else %}
+    <p class="muted">{{ ui("UI-084") }}</p>
+  {% endif %}
+
+  <p id="stuck" class="muted" {% if drafts or hints %}hidden{% endif %} data-delay="180">{{ ui("UI-077") }}</p>
+  <p>
+    {% if not flags.softened %}<button type="submit" name="action" value="soften">{{ ui("UI-078") }}</button>{% endif %}
+    {% if not flags.tool_changed %}<button type="submit" name="action" value="change">{{ ui("UI-057") }}</button>{% endif %}
+    <button type="submit" name="action" value="give_answer">Просто дай ответ</button>
+  </p>
+</form>
+<script>
+(function () {
+  var el = document.getElementById('stuck');
+  if (el && el.hasAttribute('hidden') === false) { el.hidden = true; setTimeout(function () { el.hidden = false; }, 180000); }
+})();
+</script>
+{% endif %}
+{% endblock %}

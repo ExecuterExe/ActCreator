@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Контрольная точка — АктКреватор{% endblock %}
+{% block content %}
+<h1>Контрольная точка</h1>
+{% if too_early %}
+  <p>Новая задача, 3 минуты, без ИИ и подсказок — так мы честно видим, меняются ли ваши первые мысли.</p>
+{% else %}
+  <p>{{ ui("UI-145") }}</p>
+{% endif %}
+{% if too_early %}
+  <p class="muted">Следующая контрольная точка — не раньше {{ st.next_allowed.strftime("%d.%m") }}: не чаще раза в 7 дней.</p>
+{% else %}
+  <p>Будет новая задача и {{ seconds // 60 }} минуты. Пишите идеи по одной на строку.</p>
+  <form method="post" action="{{ url_for('between.checkpoint_start') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <button type="submit">Начать</button>
+  </form>
+{% endif %}
+
+{% if points %}
+  <h2>Ваши точки</h2>
+  <table>
+    <tr><th>Когда</th><th>Замер</th><th>Редких направлений</th></tr>
+    {% for p in points %}<tr><td>{{ p.date.strftime("%d.%m.%Y") if p.date else "—" }}</td><td>{{ p.label }}</td><td>{{ p.ipm }}</td></tr>{% endfor %}
+  </table>
+{% endif %}
+<p><a href="{{ url_for('me') }}">В кабинет</a></p>
+{% endblock %}

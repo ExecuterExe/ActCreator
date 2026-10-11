@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Шаг 4 из 5. Задача — АктКреватор{% endblock %}
+{% block content %}
+<h1>Шаг 4 из 5. Задача</h1>
+<p class="timer">Осталось: <span id="timer">{{ remaining // 60 }}:{{ '%02d' % (remaining % 60) }}</span></p>
+<div class="box">
+  <p><b>Задача:</b> {{ task.text }}</p>
+  <p class="muted">{{ task.instruction }}</p>
+</div>
+<form method="post" id="task-form">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Ваши идеи — по одной на строку
+    <textarea name="ideas" id="ideas" autofocus></textarea>
+  </label>
+  <p><button type="submit">Готово, закончить раньше</button></p>
+</form>
+<script>
+(function () {
+  var left = {{ remaining }};
+  var form = document.getElementById('task-form');
+  var area = document.getElementById('ideas');
+  var out = document.getElementById('timer');
+  var key = 'actkreator-ideas-draft';
+  try { var saved = sessionStorage.getItem(key); if (saved) area.value = saved; } catch (e) {}
+  area.addEventListener('input', function () {
+    try { sessionStorage.setItem(key, area.value); } catch (e) {}
+  });
+  form.addEventListener('submit', function () {
+    try { sessionStorage.removeItem(key); } catch (e) {}
+  });
+  function tick() {
+    var m = Math.floor(left / 60), s = left % 60;
+    out.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (left <= 0) {
+      out.textContent = 'время вышло';
+      try { sessionStorage.removeItem(key); } catch (e) {}
+      form.submit();
+      return;
+    }
+    left -= 1;
+    setTimeout(tick, 1000);
+  }
+  tick();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Итог месяца — АктКреватор{% endblock %}
+{% block content %}
+<h1>Итог месяца</h1>
+{% if m.short %}
+  <p>За последние 30 дней тренировок: {{ m.n }}. Это слишком мало для выводов — здесь только факты.</p>
+  <p class="muted">Какой ритм вам удобен? Тренировка занимает 12–15 минут; начать можно в кабинете.</p>
+{% else %}
+  <p><b>{{ m.line }}</b></p>
+  <p>На своих задачах: {{ m.own }}, учебных: {{ m.practice }}.</p>
+  {% if m.top %}<h2>Привычные направления первых идей</h2>
+    <ul>{% for name, c in m.top %}<li>«{{ name }}» — {{ c }}</li>{% endfor %}</ul>{% endif %}
+  {% if m.assumptions %}<h2>Допущения, которые вы признали и проверяли чаще всего</h2>
+    <ul>{% for text, c in m.assumptions %}<li>{{ text }} — {{ c }}</li>{% endfor %}</ul>{% endif %}
+  {% if m.tool_shift %}<h2>Инструменты, которые давали вам сдвиг</h2>
+    <ul>{% for name, c in m.tool_shift %}<li>{{ name }} — {{ c }}</li>{% endfor %}</ul>{% endif %}
+{% endif %}
+
+<h2>Идеи, дошедшие до дела</h2>
+{% if m.reached %}<ul>{% for i in m.reached %}<li>{{ i.text }} — {{ i.status }}</li>{% endfor %}</ul>
+{% else %}<p class="muted">Пока нет.</p>{% endif %}
+
+<h2>Индекс первой мысли</h2>
+{% if m.points %}
+  <ul>{% for p in m.points %}<li>{{ p.label }}: редких направлений — {{ p.ipm }}</li>{% endfor %}</ul>
+  <p>{{ m.trend }}</p>
+{% else %}<p class="muted">Контрольных точек пока нет.</p>{% endif %}
+
+<h2>Самостоятельность</h2>
+<p>Уровень: {{ m.level }} из 3.{% for c in m.changes %} {{ c.at[:10] }}: {{ c.from_level }} → {{ c.to_level }}.{% endfor %}</p>
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="useful">
+  <label>{{ ui("UI-166") }} <input type="text" name="text" maxlength="1000"></label>
+  <button type="submit">Отправить</button>
+</form>
+
+<details><summary>Решили не продолжать?</summary>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="stop">
+    <p>{{ ui("UI-164").split("?")[0] }}? Можно не отвечать.</p>
+    {% for o in stop_options %}<label><input type="radio" name="reason" value="{{ o }}"> {{ o }}</label><br>{% endfor %}
+    <button type="submit">Отправить</button>
+  </form>
+  <p class="muted">{{ ui("UI-162") }}</p>
+</details>
+<p><a href="{{ url_for('me') }}">В кабинет</a></p>
+{% endblock %}

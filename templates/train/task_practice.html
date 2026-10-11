@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Учебная задача — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>Учебная задача</h1>
+<p>{{ ui("UI-153", задача=task_data.text, легенда=task_data.legend) }}</p>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <p><button type="submit">Начать</button></p>
+</form>
+{% endblock %}

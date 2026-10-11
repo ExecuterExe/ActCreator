@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Контрольная точка — АктКреватор{% endblock %}
+{% block content %}
+<h1>Две самые необычные</h1>
+<p>Отметьте две идеи, которые кажутся вам самыми необычными.</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% for i in ideas %}<label><input type="checkbox" name="pick" value="{{ loop.index0 }}"> {{ i.text }}</label><br>{% endfor %}
+  <p><button type="submit">Дальше</button></p>
+</form>
+{% endblock %}

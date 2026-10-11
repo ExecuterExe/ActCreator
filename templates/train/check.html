@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Проверка за 48 часов — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>Проверка за 48 часов</h1>
+<p>{{ title }}</p>
+<div class="box">
+  <p><b>{{ plan.template.name }}.</b> {{ plan.action }}.</p>
+  <p class="muted">Время: {{ plan.template.time }}.</p>
+</div>
+{% if plan.paid %}<p class="error">{{ ui("UI-126") }}</p>{% endif %}
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save">
+  {% if errors.plan %}<p class="error">{{ errors.plan }}</p>{% endif %}
+  <label>{{ ui("UI-121") }}
+    <textarea name="plan" rows="3" maxlength="400">{{ values.plan or plan.action }}</textarea></label>
+  {% if errors.when %}<p class="error">{{ errors.when }}</p>{% endif %}
+  <p>Когда:
+    {% for d in due_options %}<label><input type="radio" name="when" value="{{ d }}" {% if values.when == d %}checked{% endif %}> {{ d }}</label> {% endfor %}
+  </p>
+  {% if errors.signals %}<p class="error">{{ errors.signals }}</p>{% endif %}
+  <label>{{ ui("UI-123") }} <input type="text" name="ok" maxlength="400" value="{{ values.ok or plan.template.ok }}"></label>
+  <label>{{ ui("UI-124") }} <input type="text" name="fail" maxlength="400" value="{{ values.fail or plan.template.fail }}"></label>
+  <p><button type="submit">Сохранить план</button></p>
+</form>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <p><button type="submit" name="action" value="skip" class="link">{{ ui("UI-127") }}</button></p>
+</form>
+{% endblock %}

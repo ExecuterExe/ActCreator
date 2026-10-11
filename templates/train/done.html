@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Сессия завершена — АктКреватор{% endblock %}
+{% block content %}
+<h1>Сессия завершена</h1>
+{% if final %}<div class="box"><p><b>Ваша идея:</b> {{ final.text }}</p><p class="muted">Статус в банке идей: {{ final.status }}.</p></div>{% endif %}
+{% if route.text %}<p>{{ route.text }}</p>{% endif %}
+{% if exp %}
+  <p><b>План проверки:</b> {{ exp.plan }} (до {{ ru_date(exp.due) }}).</p>
+  <p>{{ ui("UI-125") }}</p>
+{% else %}
+  <p class="muted">Без проверки.</p>
+{% endif %}
+<p><a href="{{ url_for('between.bank') }}">Банк идей</a> · <a href="{{ url_for('me') }}">Личный кабинет</a></p>
+{% endblock %}

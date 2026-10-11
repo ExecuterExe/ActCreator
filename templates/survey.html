@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ block.title }} — АктКреватор{% endblock %}
+{% block content %}
+<h1>{{ block.title }}</h1>
+<p>{{ block.intro }}</p>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% for q in block.questions %}
+    <fieldset>
+      <legend>{{ q.label }}{% if not q.required %} <span class="muted">(необязательно)</span>{% endif %}</legend>
+      {% set v = values.get(q.id) %}
+      {% if q.type == 'text' %}
+        <input type="text" name="{{ q.id }}" value="{{ v or '' }}" placeholder="{{ q.placeholder or '' }}" maxlength="1000">
+      {% else %}
+        {% for value, label in q.options %}
+          <label>
+            {% if q.type == 'multi' %}
+              <input type="checkbox" name="{{ q.id }}" value="{{ value }}" {% if v and value in v %}checked{% endif %}>
+            {% else %}
+              <input type="radio" name="{{ q.id }}" value="{{ value }}" {% if v == value %}checked{% endif %}>
+            {% endif %}
+            {{ label }}
+          </label>
+        {% endfor %}
+      {% endif %}
+      {% if errors.get(q.id) %}<p class="error">{{ errors[q.id] }}</p>{% endif %}
+    </fieldset>
+  {% endfor %}
+  {% if step == 'case' %}
+    <p class="muted">Если не можете вспомнить такой случай, выберите последний вариант в первом вопросе — остальные можно пропустить.</p>
+  {% endif %}
+  <p><button type="submit">Дальше</button></p>
+</form>
+{% endblock %}

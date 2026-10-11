@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Идея — АктКреватор{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('between.bank') }}">← Банк идей</a></p>
+<h1>{{ idea.text }}</h1>
+<p class="muted">Статус: {{ idea.status or "без статуса" }}{% if s.mode == "practice" %} · учебная задача{% endif %}</p>
+
+<h2>Задача</h2>
+<p>{{ task.text }}</p>
+{% if task.goal %}<p class="muted">Цель: {{ task.goal }}</p>{% endif %}
+
+{% if first %}
+  <details><summary>Первые идеи ({{ first|length }})</summary>
+    <ul>{% for f in first %}<li>{{ f.text }}{% if f.is_favorite %} — фаворит{% endif %}</li>{% endfor %}</ul>
+  </details>
+{% endif %}
+
+{% if tool.name %}<h2>Инструмент</h2><p><b>{{ tool.name }}.</b> {{ tool.task_text }}</p>{% endif %}
+
+{% if objections %}
+  <h2>Возражения</h2>
+  <ul>{% for o in objections %}<li>{{ o.condition }} — <b>{{ o.verdict or "без ответа" }}</b>{% if o.reason %} ({{ o.reason }}){% endif %}</li>{% endfor %}</ul>
+{% endif %}
+
+{% if exp %}
+  <h2>План проверки</h2>
+  <p>{{ exp.plan }} — до {{ ru_date(exp.due) }}.</p>
+  <p class="muted">Снято, если: {{ exp.success_signal }}. Подтвердилось, если: {{ exp.fail_signal }}.</p>
+{% endif %}
+
+<h2>Исходы</h2>
+{% if outcomes %}
+  <ul>{% for o in outcomes %}<li>День {{ o.day }}: {{ o.status }}{% if o.text %} — {{ o.text }}{% endif %}</li>{% endfor %}</ul>
+{% endif %}
+{% for qn in pending %}
+  <form method="post" action="{{ url_for('between.outcome', sid=qn.sid, day=qn.day) }}" class="box">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ url_for('between.idea_card', idea_id=idea.id) }}">
+    <p><b>{{ qn.question }}</b> <span class="muted">(нет ответа)</span></p>
+    {% for opt in qn.options %}<label><input type="radio" name="status" value="{{ opt }}"> {{ opt }}</label><br>{% endfor %}
+    {% if qn.day == 7 %}<select name="reason"><option value="">—</option>{% for r in refuse %}<option>{{ r }}</option>{% endfor %}</select>{% endif %}
+    <label>Комментарий (необязательно) <input type="text" name="text" maxlength="500"></label>
+    <button type="submit">Ответить</button>
+  </form>
+{% endfor %}
+{% if not outcomes and not pending %}<p class="muted">Пока вопросов нет.</p>{% endif %}
+
+<h2>Действия</h2>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="status">
+  <select name="status">{% for key, name in statuses %}<option value="{{ key }}" {% if idea.status == key %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
+  <button type="submit">Изменить статус</button>
+</form>
+{% if s.mode == "task" %}
+  <p><a href="{{ url_for('train.start', prev=s.id) }}">{{ ui("UI-021") }}</a></p>
+{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <button type="submit" name="action" value="delete" class="link">Удалить идею</button>
+</form>
+{% endblock %}

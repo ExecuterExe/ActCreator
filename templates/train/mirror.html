@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Зеркало — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>{{ ui("UI-033") }}</h1>
+{% if m.low_precision %}<p class="error">{{ ui("UI-020") }}</p>{% endif %}
+<table>
+  <tr><th>Идея</th><th>Направление</th><th></th><th></th></tr>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.text }}{% if r.favorite %} <b>(фаворит)</b>{% endif %}</td>
+      <td>{{ r.name or "не распознано" }}{% if r.explanation %}<br><span class="muted">{{ r.explanation }}</span>{% endif %}</td>
+      <td>{% if not r.family %}<span class="rare">не распознано</span>{% elif r.common %}<span class="common">частое направление</span>{% else %}<span class="rare">редкое направление</span>{% endif %}</td>
+      <td>
+        <details><summary>{{ ui("UI-045") }}</summary>
+          <form method="post">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="dispute">
+            <input type="hidden" name="idea_id" value="{{ r.id }}">
+            <p class="muted">{{ ui("UI-046") }}</p>
+            <select name="family">
+              {% for code, name in options %}<option value="{{ code }}" {% if code == r.family %}selected{% endif %}>{{ name }}</option>{% endfor %}
+              <option value="none">Ни одно не подходит</option>
+            </select>
+            <button type="submit">Сохранить</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+
+<p><b>{{ ui("UI-034", N=m.n_families, M=m.n_ideas, X=m.n_common) }}</b></p>
+<p class="muted">{% if m.common_source == "data" %}{{ ui("UI-048", N=m.n_basis) }}{% elif m.common_source == "seed" %}{{ ui("UI-047") }}{% endif %}</p>
+{% if m.n_common >= 2 %}<p>{{ ui("UI-035") }} {{ ui("UI-037") }}</p>{% endif %}
+{% if m.n_ideas and m.n_common == 0 and m.n_families %}<p>{{ ui("UI-044") }}</p>{% endif %}
+{% if m.n_families == 0 %}<p>{{ ui("UI-043") }}</p>{% endif %}
+{% if m.habit %}<p>{{ ui("UI-042", семейство=tax.name(m.habit[0]), n=m.habit[1], m=m.habit[2]) }}</p>{% endif %}
+
+{% if m.baseline %}
+<h2>{{ ui("UI-038") }}</h2>
+<ul>
+  {% for b in m.baseline[:3] %}<li>{{ b.text }} <span class="muted">({{ tax.name(b.family) or "не распознано" }})</span></li>{% endfor %}
+</ul>
+<p class="muted">{{ ui("UI-039") }}{% if m.baseline_source == "library" %} Примеры взяты из типовых ответов на похожие задачи.{% endif %}</p>
+<p>{{ ui("UI-040", K=m.overlap|length) }}</p>
+{% endif %}
+
+<h2>{{ ui("UI-041") }}</h2>
+<ul>
+  {% for code in m.untouched %}<li><b>{{ tax.name(code) }}.</b> {{ tax.mechanism(code) }}</li>{% endfor %}
+</ul>
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="continue">
+  <p><button type="submit">Дальше</button></p>
+</form>
+{% endblock %}

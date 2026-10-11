@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Маршрут мысли — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>Маршрут мысли</h1>
+<div class="box"><p>{{ text }}</p></div>
+{% if before %}<p class="muted">{{ before }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>{{ ui("UI-116") }} <input type="text" name="correction" maxlength="300"></label>
+  <fieldset>
+    <legend>{{ ui("UI-117") }}</legend>
+    {% for key, name in helped.items() %}<label><input type="radio" name="helped" value="{{ key }}"> {{ name }}</label><br>{% endfor %}
+  </fieldset>
+  <p><button type="submit">Дальше</button></p>
+</form>
+{% endblock %}

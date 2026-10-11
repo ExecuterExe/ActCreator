@@ -1,0 +1,4 @@
+<p class="muted">
+  {% for st in steps %}{% if st == current %}<b>{{ titles[st] }}</b>{% else %}{{ titles[st] }}{% endif %}{% if not loop.last %} → {% endif %}{% endfor %}
+  {% if not ai_on %}<br>ИИ не подключён — работают запасные варианты на библиотеках.{% endif %}
+</p>

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Оценка — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>Оценка</h1>
+<div class="box"><p><b>Ваша идея:</b> {{ final.text }}</p></div>
+
+<h2>Сдвиг</h2>
+{% if ev.shift is none %}
+  <p>{{ ui("UI-091") }}</p>
+{% elif ev.shift %}
+  <p>{{ ui("UI-085", **{"семейство первых идей": ev.first_name, "семейство финала": ev.family_name}) }}</p>
+{% else %}
+  <p>{{ ui("UI-086", семейство=ev.family_name) }}</p>
+{% endif %}
+
+<h2>Направление</h2>
+{% if ev.rare is not none %}
+  <p>{{ ui("UI-089") if ev.rare else ui("UI-090") }}</p>
+  <p class="muted">{% if ev.common_source == "data" %}{{ ui("UI-048", N=ev.n_basis) }}{% elif ev.common_source == "seed" %}{{ ui("UI-047") }}{% endif %}</p>
+{% else %}
+  <p class="muted">Направление не определено.</p>
+{% endif %}
+<p>{{ ui("UI-092", K=ev.flexibility) }}</p>
+
+<h2>Полезность</h2>
+{% for line in lines %}<p>{{ line }}</p>{% endfor %}
+{% if ev.rubric_source == "ai" %}
+  <p class="muted">{{ ui("UI-099") }}</p>
+{% else %}
+  <p class="muted">ИИ не подключён: связь с целью, первый шаг и механизм здесь не оцениваются{% if not lines %}, ресурсы — тоже (нет данных){% endif %}. В пилоте их отмечает ведущий.</p>
+{% endif %}
+
+<h2>Самостоятельность</h2>
+{% if ev.own %}<p>{{ ui("UI-096", n=ev.hints) }}</p>{% else %}<p>Подсказок: {{ ev.hints }}. {{ ui("UI-097") }}</p>{% endif %}
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% if ev.taken %}<p><b>Идея отмечена: в работе.</b></p>
+  {% else %}<p><button type="submit" name="action" value="take">{{ ui("UI-098") }}</button></p>{% endif %}
+
+  {% if not ev.feedback %}
+    <p class="muted">Как было по сложности?
+      <button type="submit" name="action" value="too_easy">Слишком просто</button>
+      <button type="submit" name="action" value="too_hard">Слишком сложно</button></p>
+  {% endif %}
+</form>
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% if practice %}
+    <label><input type="checkbox" name="premortem_on" value="1"> {{ ui("UI-154") }}</label>
+  {% endif %}
+  {% if ev.shift == false and not flags.retry_used %}
+    <p><button type="submit" name="action" value="retry">{{ ui("UI-087") }}</button>
+       <button type="submit" name="action" value="next">{{ ui("UI-088") }}</button></p>
+  {% else %}
+    <p><button type="submit" name="action" value="next">Дальше</button></p>
+  {% endif %}
+</form>
+{% endblock %}

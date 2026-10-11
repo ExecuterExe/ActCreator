@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Задача — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>Задача</h1>
+<p class="muted">{{ ui("UI-016") }}</p>
+{% if previous %}
+  <p>{{ ui("UI-021") }}:
+    {% for pid, pt in previous %}<a href="?prev={{ pid }}">{{ (pt.text or '')[:60] }}…</a>{% if not loop.last %} · {% endif %}{% endfor %}
+  </p>
+{% endif %}
+{% if warning %}<div class="box"><p class="error">{{ warning }}</p><p class="muted">Можно уточнить или продолжить как есть.</p></div>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% if values.get("prev_session") %}<input type="hidden" name="prev_session" value="{{ values.prev_session }}">{% endif %}
+  {% if warning %}<input type="hidden" name="confirm" value="1">{% endif %}
+  <label>{{ ui("UI-013") }}
+    <textarea name="text" style="min-height:80px" maxlength="600">{{ values.get("text") or "" }}</textarea></label>
+  {% if errors.text %}<p class="error">{{ errors.text }}</p>{% endif %}
+  <label>{{ ui("UI-014") }}
+    <input type="text" name="goal" value="{{ values.get('goal') or '' }}" maxlength="300"></label>
+  {% if errors.goal %}<p class="error">{{ errors.goal }}</p>{% endif %}
+  <label>{{ ui("UI-015") }}
+    <input type="text" name="bans" value="{{ values.get('bans') or '' }}" maxlength="300"></label>
+  <fieldset>
+    <legend>Задача про то, чтобы привлечь клиентов, покупателей, учеников или пользователей?</legend>
+    <label><input type="radio" name="in_domain" value="yes" {% if values.get("in_domain") is sameas true %}checked{% endif %}> Да</label>
+    <label><input type="radio" name="in_domain" value="no" {% if values.get("in_domain") is sameas false %}checked{% endif %}> Нет, про другое</label>
+    <p class="muted">Если «Нет»: {{ ui("UI-020")|replace(" Продолжить?", "")|replace("Эта задача", "задача") }}</p>
+    {% if errors.in_domain %}<p class="error">{{ errors.in_domain }}</p>{% endif %}
+  </fieldset>
+  <label><input type="checkbox" name="example" value="1" {% if values.get("example") %}checked{% endif %}> {{ ui("UI-024") }}</label>
+  <p class="muted">Ваши ресурсы: {{ card.get("R01") or "—" }}, {{ card.get("R02") or "—" }}. <a href="{{ url_for('train.card', kind='full', next=request.path) }}">Что-то изменилось?</a></p>
+  <p><button type="submit">Дальше</button></p>
+</form>
+{% endblock %}

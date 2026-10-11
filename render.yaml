@@ -1,0 +1,29 @@
+# Render Blueprint для АктКреватора — тестовый бесплатный вариант.
+# Репозиторий = папка site. New → Blueprint → выбрать репозиторий.
+# Ключ OpenRouter Render спросит при создании (sync: false) — в репозиторий его не кладём.
+#
+# Библиотеки едут из папки libraries/ (копия 08_Библиотеки; перед коммитом — sync_libraries.py).
+# На бесплатном плане диск временный: пользователи и сессии стираются при перезапуске, деплое
+# и после «сна» сервиса. Для теста это нормально; для пилота — план starter + диск (см. README.md).
+services:
+  - type: web
+    name: actkreator
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # 1 процесс: на бесплатном плане мало памяти; timeout 120 — ответы ИИ идут до 15–40 секунд
+    startCommand: gunicorn --workers 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT "app:create_app()"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.7
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: deepseek/deepseek-chat
+      - key: PILOT_FULL_ACCESS
+        value: "1"
+      - key: ACTKREATOR_SECRET
+        generateValue: true
+      - key: ACTKREATOR_HTTPS
+        value: "1"

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Инструмент — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<h1>{{ tool.name }}</h1>
+{% if diag_text and diag.chosen_by != "user" %}<p><b>{{ diag_text }}</b></p>{% endif %}
+{% if after %}<p class="muted">{{ after }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if tool.phase == "why" %}
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="why">
+    <label>{{ ui("UI-029") }}<input type="text" name="why" maxlength="200"></label>
+    <p><button type="submit">Дальше</button></p>
+  </form>
+
+{% elif tool.phase == "select" %}
+  <p class="muted">{{ tool.why }}</p>
+  <p>Какие из этих утверждений вы молча принимаете за правду в этой задаче?</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="select">
+    <table>
+      <tr><th>Утверждение</th><th>Это про меня</th><th>Работаем с ним</th></tr>
+      {% for a in tool["items"] %}
+        <tr><td>{{ a.text }}</td>
+          <td><input type="checkbox" name="about_me" value="{{ a.id }}"></td>
+          <td><input type="radio" name="chosen" value="{{ a.id }}"></td></tr>
+      {% endfor %}
+    </table>
+    <label>Ни одно не подходит? Напишите своё: что в этой задаче кажется вам само собой разумеющимся?
+      <input type="text" name="own" maxlength="200"></label>
+    <p class="muted">{{ ui("UI-063") }}</p>
+    <p><button type="submit">Дальше</button></p>
+  </form>
+
+{% elif tool.phase == "target" %}
+  <p>Выберите направление, в котором будете искать:</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="target">
+    {% for t in targets %}<label><input type="radio" name="target" value="{{ t.code }}"> <b>{{ t.name }}</b> — {{ t.mechanism }}</label><br>{% endfor %}
+    <p><button type="submit">Дальше</button></p>
+  </form>
+
+{% else %}
+  <p class="muted">{{ tool.why }}</p>
+  {% if tool.header %}<p>{{ tool.header }}</p>{% endif %}
+  <div class="box"><p><b>Задание:</b> {{ tool.task_text }}</p>
+    {% if tool.extra %}<p>{{ tool.extra }}</p>{% endif %}
+    {% if tool.slot_note %}<p class="muted">{{ tool.slot_note }}</p>{% endif %}
+  </div>
+  {% if tool.softened_text %}<p class="muted">Задание облегчено.</p>{% endif %}
+
+  {% if tool.type == "chain" %}
+    <details><summary>Это не то допущение</summary>
+      <form method="post">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="own_assumption">
+        <label>Ваша идея держится на том, что… <input type="text" name="own" maxlength="200"></label>
+        <button type="submit">Сохранить</button>
+      </form>
+    </details>
+  {% endif %}
+
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <p><button type="submit" name="action" value="go">Придумать свою идею</button></p>
+    {% if not flags.softened %}<p><button type="submit" name="action" value="soften">{{ ui("UI-078") }}</button></p>{% endif %}
+    {% if not flags.tool_changed %}<p><button type="submit" name="action" value="change">{{ ui("UI-057") }}</button></p>{% endif %}
+  </form>
+{% endif %}
+{% endblock %}

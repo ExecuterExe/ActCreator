@@ -1,0 +1,200 @@
+import sqlite3
+from datetime import datetime, timezone
+
+from flask import current_app, g
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    login TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    password_hash TEXT NOT NULL,
+    consent_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+-- Один входной тест на пользователя.
+CREATE TABLE IF NOT EXISTS attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
+    task_id TEXT NOT NULL,
+    step TEXT NOT NULL,
+    answers_json TEXT NOT NULL DEFAULT '{}',
+    ideas_json TEXT,
+    top2_json TEXT,
+    result_json TEXT,
+    feedback_json TEXT,
+    started_at TEXT NOT NULL,
+    task_started_at TEXT,
+    task_seconds REAL,
+    completed_at TEXT
+);
+
+-- Тренировочный контур (A2, §3).
+CREATE TABLE IF NOT EXISTS user_state (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    level INTEGER NOT NULL DEFAULT 1,
+    strengths_json TEXT NOT NULL DEFAULT '{}',
+    card_json TEXT,
+    card_kind TEXT,
+    card_updated_at TEXT,
+    ai_notice_at TEXT,
+    trial_started_at TEXT,
+    paid_until TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    mode TEXT NOT NULL,
+    state TEXT NOT NULL,
+    entry_source TEXT NOT NULL DEFAULT 'self',
+    level INTEGER NOT NULL,
+    methodology_version TEXT NOT NULL,
+    task_json TEXT NOT NULL DEFAULT '{}',
+    card_json TEXT NOT NULL DEFAULT '{}',
+    mirror_json TEXT,
+    diagnosis_json TEXT,
+    tool_json TEXT,
+    eval_json TEXT,
+    route_json TEXT,
+    flags_json TEXT NOT NULL DEFAULT '{}',
+    started_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    stage TEXT NOT NULL,
+    ord INTEGER NOT NULL DEFAULT 0,
+    text TEXT NOT NULL,
+    is_favorite INTEGER NOT NULL DEFAULT 0,
+    family TEXT,
+    subfamily TEXT,
+    class_source TEXT,
+    confidence TEXT,
+    explanation TEXT,
+    disputed INTEGER NOT NULL DEFAULT 0,
+    status TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS hints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    kind TEXT NOT NULL,
+    lib_id TEXT,
+    text TEXT NOT NULL,
+    source TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS objections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    author TEXT NOT NULL,
+    lib_id TEXT,
+    category TEXT,
+    card_field TEXT,
+    mechanism_link TEXT,
+    condition TEXT NOT NULL,
+    check_text TEXT,
+    check_id TEXT,
+    severity INTEGER,
+    about_me INTEGER,
+    response_type TEXT,
+    response_text TEXT,
+    verdict TEXT,
+    basis TEXT,
+    reason TEXT,
+    verdict_source TEXT,
+    round INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS experiments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL UNIQUE REFERENCES sessions(id),
+    objection_id INTEGER,
+    template_id TEXT,
+    plan TEXT NOT NULL,
+    due TEXT,
+    success_signal TEXT,
+    fail_signal TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS outcomes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    day INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    text TEXT,
+    answered_at TEXT NOT NULL,
+    UNIQUE (session_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS checkpoints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    task_id TEXT NOT NULL,
+    ideas_json TEXT,
+    top2_json TEXT,
+    result_json TEXT,
+    started_at TEXT NOT NULL,
+    task_started_at TEXT,
+    completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS shown_items (
+    user_id INTEGER NOT NULL,
+    lib TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    session_id INTEGER,
+    at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS scaffold_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    from_level INTEGER NOT NULL,
+    to_level INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    name TEXT NOT NULL,
+    props_json TEXT NOT NULL DEFAULT '{}',
+    at TEXT NOT NULL
+);
+"""
+
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def get_db():
+    if "db" not in g:
+        g.db = sqlite3.connect(current_app.config["DATABASE"])
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
+    return g.db
+
+
+def close_db(_exc=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db(path):
+    conn = sqlite3.connect(path)
+    try:
+        conn.executescript(SCHEMA)
+    finally:
+        conn.close()
