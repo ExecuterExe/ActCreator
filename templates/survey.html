@@ -7,10 +7,10 @@
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   {% for q in block.questions %}
     <fieldset>
-      <legend>{{ q.label }}{% if not q.required %} <span class="muted">(необязательно)</span>{% endif %}</legend>
+      <legend id="lg-{{ q.id }}">{{ q.label }}{% if not q.required %} <span class="muted">(необязательно)</span>{% endif %}</legend>
       {% set v = values.get(q.id) %}
       {% if q.type == 'text' %}
-        <input type="text" name="{{ q.id }}" value="{{ v or '' }}" placeholder="{{ q.placeholder or '' }}" maxlength="1000">
+        <input type="text" name="{{ q.id }}" value="{{ v or '' }}" placeholder="{{ q.placeholder or '' }}" maxlength="1000" aria-labelledby="lg-{{ q.id }}">
       {% else %}
         {% for value, label in q.options %}
           <label>
@@ -29,6 +29,6 @@
   {% if step == 'case' %}
     <p class="muted">Если не можете вспомнить такой случай, выберите последний вариант в первом вопросе — остальные можно пропустить.</p>
   {% endif %}
-  <p><button type="submit">Дальше</button></p>
+  <div class="actions"><button type="submit" class="primary">Дальше</button></div>
 </form>
 {% endblock %}

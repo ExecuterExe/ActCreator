@@ -2,17 +2,17 @@
 {% block title %}Шаг 4 из 5. Задача — АктКреватор{% endblock %}
 {% block content %}
 <h1>Шаг 4 из 5. Задача</h1>
-<p class="timer">Осталось: <span id="timer">{{ remaining // 60 }}:{{ '%02d' % (remaining % 60) }}</span></p>
-<div class="box">
+<p class="timer"><span class="caption">Осталось</span><span id="timer">{{ remaining // 60 }}:{{ '%02d' % (remaining % 60) }}</span></p>
+<div class="panel task-card">
   <p><b>Задача:</b> {{ task.text }}</p>
   <p class="muted">{{ task.instruction }}</p>
 </div>
 <form method="post" id="task-form">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <label>Ваши идеи — по одной на строку
-    <textarea name="ideas" id="ideas" autofocus></textarea>
+    <textarea name="ideas" id="ideas" class="tall" autofocus></textarea>
   </label>
-  <p><button type="submit">Готово, закончить раньше</button></p>
+  <div class="actions"><button type="submit" class="primary">Готово, закончить раньше</button></div>
 </form>
 <script>
 (function () {

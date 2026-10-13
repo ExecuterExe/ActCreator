@@ -84,6 +84,8 @@ class OpenRouterClient:
                 last_error = LLMError(f"HTTP {exc.code}")
                 if exc.code in (401, 402, 403):  # ключ, оплата, доступ — повтор не поможет
                     break
+                if exc.code == 429:  # слишком много запросов сразу (параллельные вызовы) — подождать дольше
+                    time.sleep(2.5)
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
                 last_error = LLMError(f"сеть: {type(exc).__name__}")
             except (KeyError, IndexError, ValueError) as exc:

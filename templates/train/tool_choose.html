@@ -2,9 +2,10 @@
 {% block title %}Выбор инструмента — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
-<h1>Инструмент</h1>
+<span class="eyebrow">Инструмент</span>
+<h1>Выберите, чем будете думать</h1>
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post">
+<form method="post" data-busy="Готовим задание…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   {% if need_self %}
     <input type="hidden" name="action" value="self_diag">
@@ -12,7 +13,7 @@
       <legend>{{ ui("UI-058")|replace("Уровень 2: ", "") }}</legend>
       {% for opt in self_options %}<label><input type="radio" name="self_diag" value="{{ opt }}"> {{ opt }}</label><br>{% endfor %}
     </fieldset>
-    <p><button type="submit">Дальше</button></p>
+    <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
   {% else %}
     <input type="hidden" name="action" value="choose">
     {% if s.level >= 3 %}
@@ -31,7 +32,7 @@
         <label><input type="radio" name="tool" value="{{ t }}"> <b>{{ names[t] }}</b>{% if s.level == 2 and loop.first %} (по нашему диагнозу){% endif %} — {{ ui(when[t]) }}</label><br>
       {% endfor %}
     </fieldset>
-    <p><button type="submit">Выбрать</button></p>
+    <div class="actions"><button type="submit" class="primary">Выбрать</button><span class="busy-note" aria-live="polite"></span></div>
   {% endif %}
 </form>
 {% endblock %}

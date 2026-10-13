@@ -129,6 +129,15 @@ class TrainingCase(unittest.TestCase):
         assert self.state(sid) == "idea", self.state(sid)
         return sid
 
+    def submit_final(self, sid, text, **extra):
+        """Отправить идею и оставить получившуюся версию (эволюция идеи, C1 §2)."""
+        data = {"self_check": "no"}
+        data.update(extra)
+        r = self.idea(sid, "submit", text, **data)
+        if self.state(sid) == "idea" and self.session_json(sid, "flags_json").get("pending_version"):
+            r = self.idea(sid, "accept_version")
+        return r
+
     def idea(self, sid, action, text="", **extra):
         data = {"action": action, "idea": text}
         data.update(extra)
@@ -136,7 +145,7 @@ class TrainingCase(unittest.TestCase):
 
     def to_eval(self, final="Договориться с авторами издательства о рекомендациях редакторам", **kw):
         sid = self.to_idea(**kw)
-        self.idea(sid, "submit", final, self_check="no")
+        self.submit_final(sid, final)
         assert self.state(sid) == "eval", self.state(sid)
         self.page(f"/s/{sid}/eval")
         return sid
@@ -167,14 +176,14 @@ class TrainingCase(unittest.TestCase):
         self.post(f"/s/{sid}/tool", {"action": "go"})
         for kind in ("question", "transfer", "fragment")[:hints]:
             self.post(f"/s/{sid}/idea", {"hint": kind})
-        self.idea(sid, "submit", final, self_check="no")
+        self.submit_final(sid, final)
         self.page(f"/s/{sid}/eval")
         if feedback:
             self.post(f"/s/{sid}/eval", {"action": feedback})
         self.post(f"/s/{sid}/eval", {"action": "next"})
         if self.state(sid) == "premortem":
             self.post(f"/s/{sid}/premortem", {"action": "skip"})
-        self.post(f"/s/{sid}/route", {"helped": helped})
+        self.post(f"/s/{sid}/route", {"helped": helped, "wow": "Скорее нет"})
         if plan:
             self.post(f"/s/{sid}/check", {"action": "save", "plan": "Написать 3 редакторам", "when": "завтра",
                                          "ok": "ответил хотя бы один", "fail": "никто не ответил"})

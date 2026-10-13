@@ -84,9 +84,12 @@ def temp_ai(system, user):
         if "<<<а" in user:  # ответы чат-бота — в T02 и T03
             return '{"family_id": "T02", "confidence": "high", "explanation": "x"}' if "а1" in user or "а2" in user \
                 else '{"family_id": "T03", "confidence": "high", "explanation": "x"}'
+        return '{"family_id": "T01", "confidence": "high", "explanation": "x"}'
+    if "Разбери идею" in system:
         if "сломать" in user:
             return "не JSON"  # ошибка в рабочем потоке должна попасть в журнал
-        return '{"family_id": "T01", "confidence": "high", "explanation": "x"}'
+        return ('{"actor": "ученик", "action": "встаёт в очередь", "driver": "быстрее", "barrier": "очередь", '
+                '"value": "время", "condition": "если касса свободна", "family_id": "T01", "confidence": "high"}')
     return "{}"
 
 
@@ -106,7 +109,7 @@ class TempTaxonomyMirrorTest(TrainingCase):
         self.assertEqual(set(m["common"]), {"T02", "T03"})
         self.assertTrue(set(m["untouched"]).isdisjoint(m["common"]))
         errors = [json.loads(r["props_json"]) for r in self.q("SELECT props_json FROM events WHERE name = 'ai_error'")]
-        self.assertTrue(any(e["role"] == "classify" for e in errors))
+        self.assertTrue(any(e["role"] == "xray" for e in errors))
 
 
 if __name__ == "__main__":

@@ -2,24 +2,31 @@
 {% block title %}Первые идеи — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
+<span class="eyebrow">Первые идеи</span>
 <h1>{{ ui("UI-025") }}</h1>
-<p class="muted">Задача: {{ task_data.text }}</p>
+<div class="panel task-card"><span class="caption">Задача</span><p class="task-card__text">{{ task_data.text }}</p></div>
 <p>{{ ui("UI-026") }}</p>
-<p class="timer">Осталось: <span id="timer">2:00</span></p>
-{% if errors.ideas %}<p class="error">{{ errors.ideas }}</p>{% endif %}
-<form method="post">
+<p class="timer"><span class="caption">Осталось</span><span id="timer">2:00</span></p>
+{% if errors.ideas %}<p class="error" role="alert">{{ errors.ideas }}</p>{% endif %}
+<form method="post" data-busy="Разбираем, за счёт чего работают ваши идеи…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   {% for i in range(1, 5) %}
     <label>Идея {{ i }}{% if i == 4 %} (если есть ещё){% endif %}
       <input type="text" name="idea{{ i }}" maxlength="300" value="{{ (values.texts or ['','','',''])[i-1] }}"></label>
-    <label class="muted"><input type="radio" name="favorite" value="{{ i }}" {% if values.favorite == i %}checked{% endif %}> {{ ui("UI-028") }}</label>
   {% endfor %}
-  {% if errors.favorite %}<p class="error">{{ errors.favorite }}</p>{% endif %}
+  {# Фаворит — один вопрос с номерами идей: диктор читает вопрос как название группы #}
+  <fieldset>
+    <legend>{{ ui("UI-028") }}</legend>
+    <div class="choices-inline">
+      {% for i in range(1, 5) %}<label><input type="radio" name="favorite" value="{{ i }}" {% if values.favorite == i %}checked{% endif %}{% if errors.favorite %} aria-describedby="err-favorite"{% endif %}> Идея {{ i }}</label>{% endfor %}
+    </div>
+    {% if errors.favorite %}<p class="error" id="err-favorite">{{ errors.favorite }}</p>{% endif %}
+  </fieldset>
   <label>{{ ui("UI-029") }}
     <input type="text" name="why" maxlength="200" value="{{ values.why or '' }}"></label>
   <label><input type="checkbox" name="dont_know" value="1" {% if values.dont_know %}checked{% endif %}> Не знаю, с чего начать</label>
   <p class="muted">{{ ui("UI-030") }}</p>
-  <p><button type="submit">Дальше</button></p>
+  <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
 </form>
 <script>
 (function () {

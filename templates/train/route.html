@@ -2,17 +2,37 @@
 {% block title %}Маршрут мысли — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
-<h1>Маршрут мысли</h1>
-<div class="box"><p>{{ text }}</p></div>
+<span class="eyebrow">Маршрут мысли</span>
+<h1>Как вы пришли к идее</h1>
+<div class="panel task-card reveal"><p style="margin:0">{{ text }}</p></div>
+
+{% if genealogy %}
+  <h2>{{ ui("UI-200") }}</h2>
+  <ol class="evolution">
+    {% if start %}<li class="is-start"><span class="v-text">{{ start }}</span> <span class="muted">— первая идея (фаворит)</span></li>{% endif %}
+    {% for v in genealogy %}
+      <li class="reveal-2 {{ 'is-shift' if v.kind == 'механизм' else ('is-same' if v.kind in ('форма', 'нет') else '') }} {{ 'is-final' if v.stage == 'final' else '' }}">
+        <span class="caption">Версия {{ v.n }}{% if v.kind == "механизм" %} · сдвиг механизма{% elif v.kind %} · та же ветка{% endif %}</span><br>
+        <span class="v-text">{{ v.text }}</span>{% if v.mechanism %}<span class="v-meta">{{ v.mechanism }}</span>{% endif %}{% if v.changed %}<span class="v-meta">{{ v.changed }}</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+{% endif %}
+
 {% if before %}<p class="muted">{{ before }}</p>{% endif %}
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post">
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" data-busy="Подбираем самую дешёвую проверку…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% if not no_idea %}
+    <fieldset>
+      <legend>{{ ui("UI-201").split("?")[0] }}?</legend>
+      <div class="choices-inline">{% for o in wow %}<label><input type="radio" name="wow" value="{{ o }}"> {{ o }}</label>{% endfor %}</div>
+    </fieldset>
+  {% endif %}
   <label>{{ ui("UI-116") }} <input type="text" name="correction" maxlength="300"></label>
   <fieldset>
     <legend>{{ ui("UI-117") }}</legend>
     {% for key, name in helped.items() %}<label><input type="radio" name="helped" value="{{ key }}"> {{ name }}</label><br>{% endfor %}
   </fieldset>
-  <p><button type="submit">Дальше</button></p>
+  <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
 </form>
 {% endblock %}

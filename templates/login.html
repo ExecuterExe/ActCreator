@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Вход — АктКреватор{% endblock %}
 {% block content %}
+<span class="eyebrow">Аккаунт</span>
 <h1>Вход</h1>
 <form method="post">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
@@ -11,7 +12,7 @@
     <input type="password" name="password" autocomplete="current-password" required>
   </label>
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
-  <p><button type="submit">Войти</button></p>
+  <div class="actions"><button type="submit" class="primary">Войти</button></div>
 </form>
 <p>Нет аккаунта? <a href="{{ url_for('register') }}">Регистрация</a></p>
 {% endblock %}

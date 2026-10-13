@@ -20,9 +20,36 @@ from helpers import TrainingCase
 
 
 def contract_ai(system, user):
-    """Ответы по контрактам A5 для всех ролей."""
+    """Ответы по контрактам A5 для всех ролей (включая рентген, линзы и детектор сдвига v0.5)."""
     if "Оцени формулировку" in system:
         return '{"problem": "none", "in_domain": true}'
+    if "Разбери идею" in system:
+        idea = user.split("Идея:")[-1]
+        if "Скидк" in idea or "Промокод" in idea:
+            x = {"actor": "клиент", "action": "делает первый заказ", "driver": "денежная выгода",
+                 "barrier": "цена", "value": "экономия", "condition": "если цена решает", "family_id": "F07.1"}
+        else:
+            x = {"actor": "редактор", "action": "оценивает готовый образец", "driver": "снижение неопределённости",
+                 "barrier": "непонятно, подходит ли стиль", "value": "уверенность в выборе",
+                 "condition": "если книга действительно в плане", "family_id": "F06.2"}
+        return json.dumps(dict(x, confidence="high"), ensure_ascii=False)
+    if "Сравни новую идею" in system or "аналитик механизмов" in system:
+        if "обложк" in user.split("Новая идея:")[-1]:
+            return json.dumps({"new_driver": "возможность оценить работу до заказа",
+                               "new_barrier": "непонятно, подойдёт ли стиль",
+                               "shift": "механизм", "changed": ["механизм", "источник ценности"], "same_as": None,
+                               "explanation": "Раньше клиент получал выгоду, теперь — возможность оценить работу "
+                                              "до заказа."}, ensure_ascii=False)
+        return ('{"new_driver": "денежная выгода", "new_barrier": "цена", "shift": "форма", "changed": [], '
+                '"same_as": 1, "explanation": "Принцип тот же — выгода."}')
+    if "через три разные модели" in system:
+        return json.dumps({
+            "system": {"barrier": "Портфолио не показывает, подойдёт ли стиль к конкретной книге.",
+                       "question": "Где в пути редактора от письма до решения самое узкое место?"},
+            "behavior": {"barrier": "Редактору проще проигнорировать незнакомца, чем тратить время на оценку.",
+                         "question": "Что снизило бы для редактора цену первого шага?"},
+            "value": {"barrier": "Редактор пока не видит выгоды, ради которой стоит тратить время.",
+                      "question": "Что редактор получает уже в первые минуты знакомства?"}}, ensure_ascii=False)
     if "Предложи 6 идей" in user:
         return json.dumps({"ideas": ["Вести соцсети", "Скидка новым клиентам", "Попросить отзывы",
                                      "Профиль на бирже", "Партнёрство с типографией", "Нетворкинг"]}, ensure_ascii=False)
@@ -77,13 +104,14 @@ class FullChainMixin:
         self.submit_first(sid, ["Скидка 10% на первый заказ", "Скидка 20% постоянным", "Промокод для новых"], 1)
         mirror = self.page(f"/s/{sid}/mirror")
         self.assertIn("Скидки и акции", mirror)
-        self.post(f"/s/{sid}/mirror", {"action": "continue"})
+        self.assertIn("Посмотрим на задачу с трёх сторон", mirror)
+        self.post(f"/s/{sid}/mirror", {"action": "continue", "lens": "behavior"})
         # С4–С5 диагноз и инструмент
         self.assertIn("Оператор преобразования", self.page(f"/s/{sid}/tool"))
         self.post(f"/s/{sid}/tool", {"action": "go"})
         # С6 своя идея с одной подсказкой
         self.post(f"/s/{sid}/idea", {"hint": "question", "idea": "черновик"})
-        self.idea(sid, "submit", "Сделать обложку-образец к книге из плана издательства и отправить редактору")
+        self.submit_final(sid, "Сделать обложку-образец к книге из плана издательства и отправить редактору")
         # С7 оценка
         self.assertIn("Самостоятельность", self.page(f"/s/{sid}/eval"))
         self.post(f"/s/{sid}/eval", {"action": "take"})
@@ -100,12 +128,17 @@ class FullChainMixin:
         self.post(f"/s/{sid}/premortem", {"action": "finish"})
         # С9 маршрут, С10 проверка за 48 часов
         self.assertIn("Начали с", self.page(f"/s/{sid}/route"))
-        self.post(f"/s/{sid}/route", {"helped": "tool"})
+        self.post(f"/s/{sid}/route", {"helped": "tool", "wow": "Скорее нет"})
         self.assertIn("Самый дешёвый способ проверить", self.page(f"/s/{sid}/check"))
         self.post(f"/s/{sid}/check", {"action": "save", "plan": "Отправить образец двум редакторам",
                                       "when": "сегодня", "ok": "ответил один", "fail": "никто"})
         self.assertEqual(self.state(sid), "done")
         self.assertIn("Через 2 дня мы спросим", self.page(f"/s/{sid}"))
+        # журнал идеи собран из данных этой сессии
+        journal = self.page(f"/s/{sid}/journal")
+        for text in ("Лабораторный журнал идеи", "Сделать обложку-образец к книге", "Скидка 10% на первый заказ",
+                     "Первоначальный подход", "Следующий тест", "Отправить образец двум редакторам"):
+            self.assertIn(text, journal)
         # М1 исход через 3 дня → М2 банк
         past = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat(timespec="seconds")
         self.execute("UPDATE sessions SET completed_at = ? WHERE id = ?", (past, sid))
@@ -131,7 +164,7 @@ class FullChainMixin:
         names = [r["name"] for r in self.q("SELECT name FROM events")]
         for name in ("session_started", "diagnosis_made", "tool_shown", "hint_used", "idea_submitted",
                      "evaluated", "idea_taken", "premortem_done", "route_done", "check_planned",
-                     "session_completed", "outcome_answered"):
+                     "session_completed", "outcome_answered", "journal_opened"):
             self.assertIn(name, names)
         return sid, row
 
@@ -162,6 +195,18 @@ class ChainContractAITest(FullChainMixin, TrainingCase):
         self.assertTrue(task_calls)
         self.assertTrue(all("<<<Иллюстратор-фрилансер" in u or "Предложи 6 идей" in u for u in task_calls))
         self.assertEqual(self.q("SELECT COUNT(*) AS n FROM events WHERE name = 'ai_error'")[0]["n"], 0)
+        # v0.5: рентген, линзы, детектор сдвига, «вау»-вопрос
+        self.assertEqual({r["class_source"] for r in self.q("SELECT class_source FROM ideas WHERE stage = 'first'")},
+                         {"xray"})
+        self.assertEqual(mirror["lens_source"], "ai")
+        flags = json.loads(self.q("SELECT flags_json FROM sessions")[0]["flags_json"])
+        self.assertEqual(flags["barrier"]["lens"], "behavior")
+        final = self.q("SELECT family, change_json FROM ideas WHERE stage = 'final'")[0]
+        self.assertEqual(final["family"], "F06")
+        self.assertEqual(json.loads(final["change_json"])["vs_first"]["shift"], "механизм")
+        ev = json.loads(self.q("SELECT eval_json FROM sessions")[0]["eval_json"])
+        self.assertEqual((ev["shift_kind"], ev["novelty"]), ("механизм", "высокая" if ev["rare"] else "средняя"))
+        self.assertEqual(json.loads(self.q("SELECT route_json FROM sessions")[0]["route_json"])["wow"], "Скорее нет")
 
 
 class ChainFailingAITest(FullChainMixin, TrainingCase):

@@ -2,8 +2,33 @@
 {% block title %}Оценка — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
-<h1>Оценка</h1>
-<div class="box"><p><b>Ваша идея:</b> {{ final.text }}</p></div>
+<span class="eyebrow">Оценка</span>
+<h1>Что получилось</h1>
+<div class="panel task-card"><span class="caption">Ваша идея{% if ev.versions > 1 %} · версия {{ ev.versions }}{% endif %}</span>
+  <p style="font-size:var(--fs-lead);font-weight:700;margin:6px 0 0">{{ final.text }}</p>
+  {% if ev.versions > 1 %}<p class="muted" style="margin-top:var(--s2)">Версия {{ ev.versions }} — идею дорабатывали.</p>{% endif %}</div>
+
+{# Две шкалы вместо одного победителя (C1 §7): точка — только если обе оценки есть #}
+{% if ev.novelty or ev.feasibility %}
+  {% set levels = ["низкая", "средняя", "высокая"] %}
+  <section class="panel axes">
+    {% if ev.novelty and ev.feasibility %}
+      <div class="axes__grid" role="img" aria-label="Новизна механизма — {{ ev.novelty }}, реализуемость — {{ ev.feasibility }}">
+        {% for nov in levels|reverse %}{% for fea in levels %}
+          <div class="axes__cell {{ 'on' if nov == ev.novelty and fea == ev.feasibility else '' }}"></div>
+        {% endfor %}{% endfor %}
+        <span class="axes__y">новизна механизма →</span>
+        <span class="axes__x">реализуемость →</span>
+      </div>
+    {% endif %}
+    <div>
+      <span class="eyebrow">Две шкалы вместо одного балла</span>
+      <p style="font-weight:700">{{ ui("UI-194", новизна=ev.novelty or "не определена", реализуемость=ev.feasibility or "не определена") }}</p>
+      {% if ev.type_ui %}<p>{{ ui(ev.type_ui) }}</p>{% endif %}
+      <p class="muted">Новизна — не оценка качества: иногда небольшое улучшение полезнее революции.</p>
+    </div>
+  </section>
+{% endif %}
 
 <h2>Сдвиг</h2>
 {% if ev.shift is none %}
@@ -13,6 +38,7 @@
 {% else %}
   <p>{{ ui("UI-086", семейство=ev.family_name) }}</p>
 {% endif %}
+{% if ev.shift_explanation %}<p class="muted">{{ ev.shift_explanation }}</p>{% endif %}
 
 <h2>Направление</h2>
 {% if ev.rare is not none %}
@@ -33,16 +59,22 @@
 
 <h2>Самостоятельность</h2>
 {% if ev.own %}<p>{{ ui("UI-096", n=ev.hints) }}</p>{% else %}<p>Подсказок: {{ ev.hints }}. {{ ui("UI-097") }}</p>{% endif %}
+{% if hint_words %}
+  {# Основа «самостоятельности» видна: какие слова идеи совпали со словами подсказок (A4 §2.7) #}
+  <p class="surgery__row"><span class="caption surgery__label">Из подсказок</span>
+    {% for w in hint_words %}<span class="tag {{ 'tag--common' if w.also_own else 'tag--rare' }}">{{ w.word }}{% if w.also_own %}<span class="sr-only"> (было и в задаче или первых идеях)</span>{% endif %}</span>{% if not loop.last %}<span class="sr-only">, </span>{% endif %}{% endfor %}</p>
+  <p class="muted surgery__note">Серые были и в задаче или ваших первых идеях.</p>
+{% endif %}
 
-<form method="post">
+<form method="post" class="panel panel--quiet">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-  {% if ev.taken %}<p><b>Идея отмечена: в работе.</b></p>
-  {% else %}<p><button type="submit" name="action" value="take">{{ ui("UI-098") }}</button></p>{% endif %}
+  {% if ev.taken %}<p class="callout callout--discovery" style="margin:0"><b>Идея отмечена: в работе.</b></p>
+  {% else %}<button type="submit" name="action" value="take" class="discovery">{{ ui("UI-098") }}</button>{% endif %}
 
   {% if not ev.feedback %}
-    <p class="muted">Как было по сложности?
+    <div class="toolbar" style="margin-top:var(--s4)"><span class="muted">Как было по сложности?</span>
       <button type="submit" name="action" value="too_easy">Слишком просто</button>
-      <button type="submit" name="action" value="too_hard">Слишком сложно</button></p>
+      <button type="submit" name="action" value="too_hard">Слишком сложно</button></div>
   {% endif %}
 </form>
 
@@ -51,11 +83,9 @@
   {% if practice %}
     <label><input type="checkbox" name="premortem_on" value="1"> {{ ui("UI-154") }}</label>
   {% endif %}
-  {% if ev.shift == false and not flags.retry_used %}
-    <p><button type="submit" name="action" value="retry">{{ ui("UI-087") }}</button>
-       <button type="submit" name="action" value="next">{{ ui("UI-088") }}</button></p>
-  {% else %}
-    <p><button type="submit" name="action" value="next">Дальше</button></p>
-  {% endif %}
+  <div class="actions">
+    {% if can_improve %}<button type="submit" name="action" value="improve">{{ ui("UI-199") }}</button>{% endif %}
+    <button type="submit" name="action" value="next" class="primary">{% if can_improve %}{{ ui("UI-088") }}{% else %}Дальше{% endif %}</button>
+  </div>
 </form>
 {% endblock %}

@@ -1,0 +1,85 @@
+{# Фирменный момент «интеллектуальный сдвиг» (C1 §3). Параметр: v — карточка версии (version_view).
+   Настоящий сдвиг механизма — новая ветка уходит от линии привычной мысли.
+   Только новая форма — узел честно остаётся на той же линии. Нет данных — карточка без схемы. #}
+{% set real = v.kind == "механизм" %}
+{% set same = v.kind in ("форма", "нет") %}
+<section class="shift {{ 'shift--real' if real else ('shift--same' if same else '') }}" aria-labelledby="shift-{{ v.id }}">
+  <span class="eyebrow">{{ ui("UI-179", n=v.n) }}</span>
+  <h2 class="shift__title" id="shift-{{ v.id }}">
+    {% if real %}<span class="tag tag--shift">Сдвиг механизма</span>
+    {% elif same %}<span class="tag tag--same">Та же ветка</span>
+    {% else %}<span class="tag">Разбор недоступен</span>{% endif %}
+  </h2>
+  {% if v.kind %}
+  <div class="shift__map">
+    {# Линии растягиваются по высоте текста, а узлы — HTML-точки, чтобы оставаться круглыми #}
+    <div class="shift__rail" aria-hidden="true">
+      <svg class="shift__svg" viewBox="0 0 56 200" preserveAspectRatio="none">
+        <path d="M14 198V8" class="branch-main" vector-effect="non-scaling-stroke"/>
+        {% if real %}
+          <path d="M14 150 C 14 90, 30 40, 44 22" class="branch-new" pathLength="100"/>
+        {% else %}
+          <path d="M14 160V30" class="branch-same" vector-effect="non-scaling-stroke"/>
+        {% endif %}
+      </svg>
+      <span class="dot dot--old"></span>
+      {% if real %}<span class="dot dot--new"></span>
+      {% else %}<span class="dot dot--same"></span>{% endif %}
+    </div>
+    <div class="shift__nodes">
+      <div class="shift__node">
+        <span class="caption">{{ "Стало" if real else "Новая версия" }}{% if v.to_family %} · {{ v.to_family }}{% endif %}</span>
+        <div class="shift__to">{{ v.to_mechanism or v.text }}</div>
+        <div class="muted shift__quote">«{{ v.text }}»</div>
+      </div>
+      {% if v.from_text %}
+      <div class="shift__node">
+        <span class="caption">{{ "Было" if real else "Тот же принцип, что у" }}{% if v.from_family %} · {{ v.from_family }}{% endif %}</span>
+        <div class="shift__from">{{ v.from_mechanism or v.from_text }}</div>
+        <div class="muted shift__quote">«{{ v.from_text }}»</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% if v.verdict %}<p class="shift__why">{{ v.verdict }}</p>
+  {% elif v.explanation %}<p class="shift__why">{{ v.explanation }}</p>{% endif %}
+  {% set sg = v.surgery or {} %}
+  {% if sg.dims %}
+    {# Хирургия идеи: все измерения детектора — что сменилось и что осталось прежним (только разбор ИИ) #}
+    {% set changed = sg.dims|selectattr("changed")|list %}
+    {% set kept = sg.dims|selectattr("kept")|list %}
+    <div class="surgery">
+      {% if changed %}
+      <p class="surgery__row"><span class="caption surgery__label">Изменилось</span>
+        {% for d in changed %}<span class="tag {{ 'tag--shift' if real and d.name == 'механизм' else 'tag--rare' }}">{{ d.name }}</span>{% if not loop.last %}<span class="sr-only">, </span>{% endif %}{% endfor %}</p>
+      {% endif %}
+      {% if kept %}
+      <p class="surgery__row"><span class="caption surgery__label">Осталось</span>
+        {% for d in kept %}<span class="tag {{ 'tag--same' if d.name == 'механизм' else 'tag--common' }}">{{ d.name }}</span>{% if not loop.last %}<span class="sr-only">, </span>{% endif %}{% endfor %}</p>
+      {% endif %}
+      <p class="muted surgery__note">По разбору ИИ — в сравнении с вашими первыми идеями.
+        {% if kept %}Что не названо ни там, ни там, ИИ оценить не смог.{% else %}Что осталось прежним, в этом разборе не отмечено.{% endif %}</p>
+    </div>
+  {% elif v.dims %}
+    <p class="shift__dims">
+      <span class="caption">Что изменилось:</span>
+      {% for d in v.dims %}<span class="tag">{{ d }}</span>{% if not loop.last %}<span class="sr-only">, </span>{% endif %}{% endfor %}
+    </p>
+  {% endif %}
+  {% if sg.parts %}
+    <details class="surgery__parts">
+      <summary>Разбор по частям: было и стало</summary>
+      <table class="parts">
+        <caption class="sr-only">Как работает прежняя идея и новая версия</caption>
+        <thead><tr><th scope="col"><span class="sr-only">Часть идеи</span></th><th scope="col">Было</th><th scope="col">Стало</th></tr></thead>
+        <tbody>
+          {% for p in sg.parts %}<tr><th scope="row">{{ p.label }}</th><td data-label="Было">{{ p.before }}</td><td data-label="Стало">{{ p.after }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      <p class="muted surgery__note">Разбор ИИ по каждой идее отдельно. Совпадают ли части по смыслу, здесь не оценивается — это видно в строках выше.</p>
+    </details>
+  {% endif %}
+  {% if same %}<p class="muted shift__advice">Это не ошибка — так работает привычка. Чтобы свернуть с ветки, поменяйте то, за счёт чего клиент принимает решение, а не слова.</p>{% endif %}
+  {% if risk %}<p class="callout callout--risk shift__advice"><span class="caption">Ещё проверить</span><br>{{ risk }}</p>{% endif %}
+</section>

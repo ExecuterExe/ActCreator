@@ -96,7 +96,8 @@ class BankTest(BetweenCase):
         idea_id = self.q("SELECT id FROM ideas WHERE stage = 'final'")[0]["id"]
         card = self.page(f"/bank/{idea_id}")
         for part in ("Иллюстратор-фрилансер", "Первые идеи (3)", "Оператор преобразования", "Написать 3 редакторам",
-                     "Продолжить прошлую задачу"):
+                     "Продолжить прошлую задачу", "Возражения", "План проверки", f"/s/{sid}/journal",
+                     'for="idea-status"', "data-confirm="):
             self.assertIn(part, card)
         self.post(f"/bank/{idea_id}", {"action": "status", "status": "отложено"})
         self.assertIn("Отложено (1)", self.page("/bank"))
@@ -125,6 +126,10 @@ class BankTest(BetweenCase):
         self.idea(sid2, "submit", "- Блог об обложках\n- Стенд на ярмарке")
         self.idea(sid2, "pick", chosen="1")
         self.assertIn("Дополнительные (1)", self.page("/bank"))
+        extra = self.q("SELECT id FROM ideas WHERE stage = 'extra'")[0]["id"]
+        card = self.page(f"/bank/{extra}")  # у дополнительной идеи нет ступени эволюции — карточка всё равно цела
+        self.assertIn("дополнительная", card)
+        self.assertNotIn("эта идея", card)
 
     def test_continue_task_from_bank(self):
         old = self.run_session()

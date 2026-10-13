@@ -1,74 +1,168 @@
 {% extends "base.html" %}
 {% block title %}Своя идея — АктКреватор{% endblock %}
 {% block content %}
-{% include "train/_steps.html" %}
-<h1>Своя идея</h1>
-<div class="box">
-  <p><b>{{ tool.name }}.</b> {{ tool.task_text }}</p>
+<div data-focus-hide>{% include "train/_steps.html" %}</div>
+<span class="eyebrow">Своя идея</span>
+<h1>Придумайте свой ход</h1>
+<div class="panel task-card">
+  <span class="caption">{{ tool.name }}</span>
+  <p style="font-size:var(--fs-lead);font-weight:600;margin:6px 0 var(--s2)">{{ tool.task_text }}</p>
   {% if tool.extra %}<p>{{ tool.extra }}</p>{% endif %}
+  {% if tool.barrier_line %}<p class="muted">{{ tool.barrier_line }}</p>{% endif %}
   {% if tool.header %}<p class="muted">{{ tool.header }}</p>{% endif %}
 </div>
 
-{% if flags.retry_used %}<p class="muted">Ещё 3 минуты с тем же заданием. Прошлая идея сохранена в банке.</p>{% endif %}
+{% if improve_ui %}<div class="callout callout--process"><span class="caption">Доработка</span><p>Доработка: {{ ui(improve_ui) }}</p></div>{% endif %}
 {% if refusal %}
-  <div class="box">
+  <div class="callout callout--process" role="status">
     <p>{{ ui("UI-082") }}</p>
     <p>{{ ui("UI-083") }}</p>
   </div>
 {% endif %}
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
-{% if multi %}
-  <p>{{ ui("UI-081") }}</p>
-  <form method="post">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    <input type="hidden" name="action" value="pick">
-    {% for item in multi %}<label><input type="radio" name="chosen" value="{{ loop.index0 }}"> {{ item }}</label><br>{% endfor %}
-    <p><button type="submit">Проверим эту</button></p>
-  </form>
-{% else %}
-
-{% if hints %}
-  <h2>Подсказки</h2>
-  <ul>{% for h in hints %}<li><b>{{ hint_names[h.kind] }}:</b> {{ h.text }}</li>{% endfor %}</ul>
+{% if history %}
+<div data-focus-hide>
+  <h2>{{ ui("UI-200") }}</h2>
+  <ol class="evolution">
+    {% for v in history %}
+      <li class="{{ 'is-shift' if v.kind == 'механизм' else ('is-same' if v.kind in ('форма', 'нет') else '') }}">
+        <span class="caption">Версия {{ v.n }}{% if v.kind == "механизм" %} · сдвиг механизма{% elif v.kind %} · та же ветка{% endif %}</span><br>
+        <span class="v-text">{{ v.text }}</span>
+        {% if v.mechanism %}<span class="v-meta">{{ v.mechanism }}</span>{% endif %}
+        {% if v.changed %}<span class="v-meta">{{ v.changed }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</div>
 {% endif %}
 
-<form method="post">
+{% if pending %}
+  {# Версия отправлена: рентген и детектор сдвига. Дорабатываем или оставляем (C1 §2–3). #}
+  <p class="muted">Ваша версия: <b>{{ pending.text }}</b></p>
+  {% with v=pending %}{% include "train/_shift.html" %}{% endwith %}
+  <form method="post" class="actions" data-busy="Готовим оценку…">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    {% if pending.kind == "механизм" %}
+      <button type="submit" name="action" value="accept_version" class="primary">{{ ui("UI-183") }}</button>
+      {% if pending.n < max_versions %}<button type="submit" name="action" value="improve" data-busy="">{{ ui("UI-182") }}</button>{% endif %}
+    {% else %}
+      {% if pending.n < max_versions %}<button type="submit" name="action" value="improve" class="primary" data-busy="">{{ ui("UI-182") }}</button>{% endif %}
+      <button type="submit" name="action" value="accept_version" {% if pending.n >= max_versions %}class="primary"{% endif %}>{{ ui("UI-183") }}</button>
+    {% endif %}
+    <span class="caption">версия {{ pending.n }} из {{ max_versions }}</span>
+    <span class="busy-note" aria-live="polite"></span>
+  </form>
+
+{% elif ladder %}
+  {# Лестница выхода из тупика: меняем способ мышления, а не выдаём ответ (C1 §5). #}
+  <section class="ladder" aria-labelledby="ladder-title">
+    <span class="eyebrow" id="ladder-title">{{ ui("UI-185") }} · ступень {{ ladder.step }} из 4</span>
+    <ol class="ladder__steps" aria-hidden="true">
+      {% for n in range(1, 5) %}<li class="{{ 'done' if n < ladder.step else ('now' if n == ladder.step else '') }}"></li>{% endfor %}
+    </ol>
+    <form method="post"{% if ladder.step == 3 %} data-busy="Подбираем операцию…"{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      {% if ladder.step == 1 %}
+        <input type="hidden" name="action" value="ladder_1">
+        <fieldset><legend>{{ ui("UI-186").split("?")[0] }}?</legend>
+          {% for o in obstacles %}<label><input type="radio" name="obstacle" value="{{ o }}" required> {{ o }}</label>{% endfor %}
+        </fieldset>
+      {% elif ladder.step == 2 %}
+        <input type="hidden" name="action" value="ladder_2">
+        <label><b>{{ ui("UI-187", клиенту="вашему клиенту") }}</b>
+          <input type="text" name="barrier" maxlength="200" value="{{ tool.barrier or '' }}"></label>
+      {% elif ladder.step == 3 %}
+        <input type="hidden" name="action" value="ladder_3">
+        <fieldset><legend>{{ ui("UI-188").split(":")[0] }}:</legend>
+          <div class="choices-inline">{% for o in operations %}<label><input type="radio" name="operation" value="{{ o }}" required> {{ o }}</label>{% endfor %}</div>
+        </fieldset>
+      {% elif ladder.step == 4 %}
+        <input type="hidden" name="action" value="ladder_4">
+        {% if ladder.op_text %}<div class="callout callout--process"><span class="caption">Операция</span><p>{{ ladder.op_text }}</p></div>{% endif %}
+        <label>{{ ui("UI-189") }} <input type="text" name="what" maxlength="200" required></label>
+        <label>{{ ui("UI-190") }} <input type="text" name="easier" maxlength="200" required></label>
+      {% endif %}
+      <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
+    </form>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <p class="muted" style="margin-top:var(--s4)">{{ ui("UI-192") }}</p>
+      <button type="submit" name="action" value="ladder_quit" class="link">{{ ui("UI-193") }}</button>
+    </form>
+  </section>
+
+{% elif multi %}
+  <div class="panel">
+    <p>{{ ui("UI-081") }}</p>
+    <form method="post" data-busy="Разбираем идею…">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="pick">
+      {% for item in multi %}<label><input type="radio" name="chosen" value="{{ loop.index0 }}"> {{ item }}</label>{% endfor %}
+      <div class="actions"><button type="submit" class="primary">Проверим эту</button><span class="busy-note" aria-live="polite"></span></div>
+    </form>
+  </div>
+
+{% else %}
+
+{# «Чистый лист» (по желанию): остаются задание и поле, история и помощь возвращаются одной кнопкой.
+   Без JS переключателя нет — экран как в B4 §1. #}
+<div class="focus-bar" data-focus-bar hidden>
+  <button type="button" class="quiet" aria-pressed="false" data-focus-toggle>Чистый лист</button>
+  <span class="caption" data-focus-hint>скрыть историю и помощь, остаться с задачей</span>
+</div>
+
+{% if hints %}
+<div data-focus-hide>
+  <h2>Подсказки</h2>
+  <ul class="hint-list">{% for h in hints %}<li class="reveal"><b>{{ hint_names[h.kind] }}:</b> {{ h.text }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" data-busy="Разбираем идею: механизм и сдвиг…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="focus" value="0" data-focus-field>
   <label>{{ ui("UI-074") }}
     <textarea name="idea" rows="5" maxlength="{{ 600 }}">{{ text or "" }}</textarea></label>
 
   {% if self_check_needed %}
     <fieldset>
       <legend>{{ ui("UI-080") }}</legend>
-      <label><input type="radio" name="self_check" value="yes" {% if self_check == "yes" %}checked{% endif %}> Да</label>
-      <label><input type="radio" name="self_check" value="no" {% if self_check == "no" %}checked{% endif %}> Нет</label>
+      <div class="choices-inline">
+        <label><input type="radio" name="self_check" value="yes" {% if self_check == "yes" %}checked{% endif %}> Да</label>
+        <label><input type="radio" name="self_check" value="no" {% if self_check == "no" %}checked{% endif %}> Нет</label>
+      </div>
     </fieldset>
   {% endif %}
   {% if confirm_needed %}
-    <p class="error">Тогда идея обходит то, от чего мы отказались, — сдвига может не получиться. Попробуйте изменить её или отправьте как есть.</p>
+    <p class="callout callout--risk">Тогда идея обходит то, от чего мы отказались, — сдвига может не получиться. Попробуйте изменить её или отправьте как есть.</p>
     <label><input type="checkbox" name="confirm" value="1"> Отправить как есть</label>
   {% endif %}
 
-  <p>
-    <button type="submit" name="action" value="submit">Отправить идею</button>
-    <button type="submit" name="action" value="draft">Сохранить черновик</button>
-  </p>
+  <div class="actions">
+    <button type="submit" name="action" value="submit" class="primary">Отправить идею</button>
+    <button type="submit" name="action" value="draft" data-busy="">Сохранить черновик</button>
+    <span class="busy-note" aria-live="polite"></span>
+  </div>
 
-  <p>{{ ui("UI-075", n=left) }}</p>
-  {% if left > 0 %}
-    <p>{% for k, name in hint_names.items() %}<button type="submit" name="hint" value="{{ k }}">{{ name }}</button> {% endfor %}</p>
-    <p class="muted">{{ ui("UI-076") }}</p>
-  {% else %}
-    <p class="muted">{{ ui("UI-084") }}</p>
-  {% endif %}
+  <div class="panel panel--quiet" data-focus-hide>
+    <p class="budget">{{ ui("UI-075", n=left) }}</p>
+    {% if left > 0 %}
+      <div class="toolbar">{% for k, name in hint_names.items() %}<button type="submit" name="hint" value="{{ k }}" data-busy="Готовим подсказку…">{{ name }}</button>{% endfor %}</div>
+      <p class="muted" style="margin-top:var(--s2)">{{ ui("UI-076") }}</p>
+    {% else %}
+      <p class="muted">{{ ui("UI-084") }}</p>
+    {% endif %}
+  </div>
 
-  <p id="stuck" class="muted" {% if drafts or hints %}hidden{% endif %} data-delay="180">{{ ui("UI-077") }}</p>
-  <p>
-    {% if not flags.softened %}<button type="submit" name="action" value="soften">{{ ui("UI-078") }}</button>{% endif %}
-    {% if not flags.tool_changed %}<button type="submit" name="action" value="change">{{ ui("UI-057") }}</button>{% endif %}
-    <button type="submit" name="action" value="give_answer">Просто дай ответ</button>
-  </p>
+  <p id="stuck" class="muted" {% if drafts or hints %}hidden{% endif %} data-delay="180">{{ ui("UI-077") }}
+    <button type="button" class="link" data-focus-exit hidden>Вернуть инструменты</button></p>
+  <div class="toolbar" data-focus-hide>
+    <button type="submit" name="action" value="ladder_start" data-busy="">{{ ui("UI-185") }}</button>
+    {% if not flags.softened %}<button type="submit" name="action" value="soften" data-busy="Облегчаем задание…">{{ ui("UI-078") }}</button>{% endif %}
+    {% if not flags.tool_changed %}<button type="submit" name="action" value="change" data-busy="Подбираем другой инструмент…">{{ ui("UI-057") }}</button>{% endif %}
+    <button type="submit" name="action" value="give_answer" class="link" data-busy="">Просто дай ответ</button>
+  </div>
 </form>
 <script>
 (function () {

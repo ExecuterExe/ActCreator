@@ -1,4 +1,13 @@
-<p class="muted">
-  {% for st in steps %}{% if st == current %}<b>{{ titles[st] }}</b>{% else %}{{ titles[st] }}{% endif %}{% if not loop.last %} → {% endif %}{% endfor %}
-  {% if not ai_on %}<br>ИИ не подключён — работают запасные варианты на библиотеках.{% endif %}
-</p>
+{# Траектория сессии: где человек сейчас, что пройдено, что впереди. #}
+{% set idx = steps.index(current) if current in steps else steps|length %}
+<nav class="trajectory" aria-label="Шаги тренировки">
+  <ol style="--n: {{ steps|length }}">
+    {% for st in steps %}
+      <li class="{{ 'done' if loop.index0 < idx else '' }}" {% if st == current %}aria-current="step"{% endif %}>
+        <span class="label">{{ titles[st] }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+  <p class="trajectory-compact caption">Шаг {{ idx + 1 if idx < steps|length else steps|length }} из {{ steps|length }} · <span style="color:var(--text)">{{ titles[current] if current in titles else "" }}</span></p>
+  {% if not ai_on %}<p class="muted ai-off">ИИ не подключён — работают запасные варианты на библиотеках.</p>{% endif %}
+</nav>

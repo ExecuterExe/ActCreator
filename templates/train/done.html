@@ -1,14 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Сессия завершена — АктКреватор{% endblock %}
 {% block content %}
-<h1>Сессия завершена</h1>
-{% if final %}<div class="box"><p><b>Ваша идея:</b> {{ final.text }}</p><p class="muted">Статус в банке идей: {{ final.status }}.</p></div>{% endif %}
-{% if route.text %}<p>{{ route.text }}</p>{% endif %}
+<span class="eyebrow">Сессия завершена</span>
+<h1>Итог тренировки</h1>
+{% if final %}
+  <div class="panel task-card reveal">
+    <span class="caption">Ваша идея</span>
+    <p style="font-size:var(--fs-lead);font-weight:700;margin:6px 0 var(--s2)">{{ final.text }}</p>
+    <p class="muted">Статус в банке идей: {{ final.status }}.</p>
+  </div>
+{% endif %}
+{% if route.text %}<p class="reveal-2">{{ route.text }}</p>{% endif %}
 {% if exp %}
-  <p><b>План проверки:</b> {{ exp.plan }} (до {{ ru_date(exp.due) }}).</p>
-  <p>{{ ui("UI-125") }}</p>
-{% else %}
+  <div class="callout callout--risk reveal-3">
+    <span class="caption">Следующий тест</span>
+    <p><b>План проверки:</b> {{ exp.plan }} (до {{ ru_date(exp.due) }}).</p>
+    <p>{{ ui("UI-125") }}</p>
+  </div>
+{% elif final %}
   <p class="muted">Без проверки.</p>
 {% endif %}
-<p><a href="{{ url_for('between.bank') }}">Банк идей</a> · <a href="{{ url_for('me') }}">Личный кабинет</a></p>
+
+<div class="actions">
+  {% if final or route.text %}<a class="button primary" href="{{ url_for('train.journal', sid=s.id) }}">Открыть журнал идеи</a>{% endif %}
+  <a class="button" href="{{ url_for('between.bank') }}">Банк идей</a>
+  <a class="quiet" href="{{ url_for('me') }}">Личный кабинет</a>
+</div>
+
+{% if can_incubate %}
+  <div class="panel panel--quiet">
+  {% if incubation %}
+    <p class="muted" style="margin:0">Вопрос «второго открытия» появится в кабинете {{ ru_date(incubation.due) }}.</p>
+  {% else %}
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="incubate">
+      <p class="muted">{{ ui("UI-202") }}</p>
+      <button type="submit">Вернуться к задаче завтра</button>
+    </form>
+  {% endif %}
+  </div>
+{% endif %}
 {% endblock %}

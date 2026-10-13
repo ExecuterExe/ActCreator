@@ -1,0 +1,38 @@
+{# Паспорт происхождения идеи (B4 §1.12: «доля авторства покажет»; A4 §2.7).
+   Узлы на линии — ваши идеи и версии; засечки сбоку — что дал тренажёр или ИИ. Порядок — по времени сохранения.
+   Связей «эта подсказка породила эту версию» не рисуем: данные их не подтверждают. #}
+{% set o = origin %}
+<section class="origin" aria-labelledby="origin-title">
+  <h2 id="origin-title">Как появилась идея</h2>
+  <p class="muted">
+    {% if o.final %}Версии идеи написали вы.{% endif %}
+    Тренажёр дал инструмент{% if o.hints %}, подсказок: {{ o.hints }}{% endif %}{% if o.ladder %}, лестницу «я застрял(а)»{% endif %}.
+    {% if o.ai_parsed %}ИИ разбирал идеи и проверял сдвиг{% if o.tool_ai or o.hints_ai %}, а ещё подстраивал под задачу формулировки{% if o.tool_ai %} задания{% endif %}{% if o.tool_ai and o.hints_ai %} и{% endif %}{% if o.hints_ai %} подсказок{% endif %}{% endif %}.{% endif %}
+  </p>
+  <ol class="evolution origin__list">
+    {% for st in o.steps %}
+      <li class="{{ 'origin__node' if st.node else 'origin__input' }} origin--{{ st.who }}{{ ' is-ai' if st.ai_touch }} {{ st.cls }}">
+        <span class="caption"><span class="origin__who">{{ st.who_name }}</span>{% if st.elapsed %} · {{ st.elapsed }}{% endif %}{% if st.node and st.text %} · {{ st.title }}{% if st.note %} · {{ st.note }}{% endif %}{% endif %}</span>
+        {% if st.node and st.text %}
+          <span class="v-text">{{ st.text }}</span>
+        {% elif st.node %}
+          <span class="v-text">{{ st.title }}</span>
+          {% if st.note %}<span class="v-meta">{{ st.note }}</span>{% endif %}
+        {% else %}
+          <span class="v-text">{{ st.title }}</span>
+          {% if st.text %}<span class="v-meta">«{{ st.text }}»</span>{% endif %}
+          {% if st.note %}<span class="v-meta">{{ st.note }}</span>{% endif %}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+  {% if o.words %}
+    <div class="origin__words">
+      <p class="caption">Слова итоговой идеи, которые есть в подсказках</p>
+      <p class="surgery__row">{% for w in o.words %}<span class="tag {{ 'tag--common' if w.also_own else 'tag--rare' }}">{{ w.word }}{% if w.also_own %}<span class="sr-only"> (было и в задаче или первых идеях)</span>{% endif %}</span>{% if not loop.last %}<span class="sr-only">, </span>{% endif %}{% endfor %}</p>
+      <p class="muted surgery__note">Серые были и в задаче или ваших первых идеях. По совпадению слов считается «самостоятельность» в оценке; пересказ подсказки своими словами так не виден.</p>
+    </div>
+  {% elif o.hints and o.final %}
+    <p class="muted">В итоговой идее нет слов из подсказок.</p>
+  {% endif %}
+</section>

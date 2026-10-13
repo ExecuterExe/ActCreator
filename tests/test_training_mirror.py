@@ -79,6 +79,11 @@ def fake_ai(system, user):
         return '{"ideas": ["Вести соцсети", "Скидка новым клиентам", "Попросить отзывы", "Профиль на бирже", "Партнёрство", "Нетворкинг"]}'
     if "отнести идею" in system:
         return '{"family_id": "F15.4", "confidence": "medium", "explanation": "позиция против нормы"}'
+    if "Разбери идею" in system:  # рентген (C1 §1): идеи человека размечаются по механизму
+        code = "F07.1" if "Скидка" in user.split("Идея:")[-1] else "F15.4"
+        return ('{"actor": "прохожий", "action": "останавливается", "driver": "необычное зрелище", '
+                '"barrier": "не замечает вывеску", "value": "впечатление", "condition": "если есть поток людей", '
+                f'"family_id": "{code}", "confidence": "medium"}}')
     if "Оцени формулировку" in system:
         return '{"problem": "none", "in_domain": true}'
     return "{}"
@@ -95,8 +100,11 @@ class MirrorWithAITest(TrainingCase):
         self.post(f"/s/{sid}/first", {"idea1": "Петь песни у входа", "idea2": "Скидка новым",
                                      "favorite": "1"})
         rows = self.q("SELECT family, class_source FROM ideas ORDER BY ord")
-        self.assertEqual((rows[0]["family"], rows[0]["class_source"]), ("F15", "llm"))
-        self.assertEqual(rows[1]["class_source"], "dict")
+        self.assertEqual((rows[0]["family"], rows[0]["class_source"]), ("F15", "xray"))
+        self.assertEqual((rows[1]["family"], rows[1]["class_source"]), ("F07", "xray"))  # ИИ первым, не словарь
+        x = json.loads(self.q("SELECT xray_json FROM ideas ORDER BY ord")[0]["xray_json"])
+        self.assertEqual(x["driver"], "необычное зрелище")
+        self.assertIn("Работает за счёт: необычное зрелище", self.page(f"/s/{sid}/mirror"))
         self.page(f"/s/{sid}/mirror")
         m = json.loads(self.q("SELECT mirror_json FROM sessions")[0]["mirror_json"])
         self.assertEqual(m["baseline_source"], "ai")

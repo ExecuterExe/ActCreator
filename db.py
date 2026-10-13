@@ -171,7 +171,26 @@ CREATE TABLE IF NOT EXISTS events (
     props_json TEXT NOT NULL DEFAULT '{}',
     at TEXT NOT NULL
 );
+
+-- «Второе открытие» (C1 §6): вернуться к задаче после перерыва — только по желанию человека.
+CREATE TABLE IF NOT EXISTS incubations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL UNIQUE REFERENCES sessions(id),
+    due TEXT NOT NULL,
+    reframe TEXT,
+    barrier TEXT,
+    idea_id INTEGER,
+    answered_at TEXT,
+    created_at TEXT NOT NULL
+);
 """
+
+# Колонки, добавленные после v0.2: в существующую базу добавляются при запуске (C1 — рентген и версии идеи).
+MIGRATIONS = [
+    ("ideas", "xray_json", "TEXT"),      # причинная конструкция идеи: кто, что, за счёт чего, какой барьер
+    ("ideas", "version", "INTEGER"),     # номер версии идеи в сессии (эволюция идеи)
+    ("ideas", "change_json", "TEXT"),    # что изменилось относительно первых идей / прошлой версии
+]
 
 
 def now_iso():
@@ -196,5 +215,13 @@ def init_db(path):
     conn = sqlite3.connect(path)
     try:
         conn.executescript(SCHEMA)
+        for table, column, kind in MIGRATIONS:
+            existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            if column not in existing:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+                except sqlite3.OperationalError:  # другой процесс сервера успел добавить колонку раньше
+                    pass
+        conn.commit()
     finally:
         conn.close()

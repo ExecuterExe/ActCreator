@@ -135,9 +135,12 @@ def export_training(conn, out_dir):
         "rubric_source", "rb1", "rb2", "rb3", "rb4", "taken", "difficulty_feedback", "retry_used",
         "premortem_skipped", "user_reasons", "critic_objections", "about_me", "verdicts", "strongest_category",
         "helped", "has_plan", "check_due", "outcome_d2", "outcome_d7", "outcome_d30",
+        # методология v0.5 (C1): момент открытия
+        "lens", "shift_kind", "shift_source", "novelty", "feasibility", "versions", "improve_used",
+        "ladder_used", "no_idea", "wow", "incubation",
     ]
     stats = {"done": 0, "shift": 0, "plan": 0, "wants": 0, "about": [0, 0], "helped_bad": 0, "helped": 0,
-             "d2_done": 0, "d2_due": 0}
+             "d2_done": 0, "d2_due": 0, "wow_n": 0, "wow_new": 0, "mech": 0}
     path = out_dir / f"sessions_{stamp}.csv"
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=fields)
@@ -161,6 +164,10 @@ def export_training(conn, out_dir):
                 stats["done"] += 1
                 stats["shift"] += bool(ev.get("shift"))
                 stats["plan"] += bool(exp)
+                if route.get("wow"):
+                    stats["wow_n"] += 1
+                    stats["wow_new"] += route["wow"] in ("Нет", "Скорее нет")
+                stats["mech"] += ev.get("shift_kind") == "механизм"
                 if route.get("helped"):
                     stats["helped"] += 1
                     stats["helped_bad"] += route["helped"] in ("nothing", "knew")
@@ -201,6 +208,17 @@ def export_training(conn, out_dir):
                 "helped": route.get("helped"), "has_plan": int(bool(exp)),
                 "check_due": exp["due"] if exp else None,
                 "outcome_d2": outs.get(2), "outcome_d7": outs.get(7), "outcome_d30": outs.get(30),
+                "lens": (flags.get("barrier") or {}).get("lens"), "shift_kind": ev.get("shift_kind"),
+                "shift_source": ev.get("shift_source"), "novelty": ev.get("novelty"),
+                "feasibility": ev.get("feasibility"), "versions": ev.get("versions"),
+                "improve_used": int(bool(flags.get("improve_used"))),
+                "ladder_used": int(bool(flags.get("ladder_done") or flags.get("no_idea")
+                                        or conn.execute("SELECT COUNT(*) FROM events WHERE name = 'ladder_step' "
+                                                        "AND props_json LIKE ?", (f'%"session": {sid},%',)
+                                                        ).fetchone()[0])),
+                "no_idea": int(bool(flags.get("no_idea"))), "wow": route.get("wow"),
+                "incubation": int(bool(conn.execute("SELECT COUNT(*) FROM incubations WHERE session_id = ? "
+                                                    "AND answered_at IS NOT NULL", (sid,)).fetchone()[0])),
             })
     cp_path = out_dir / f"checkpoints_{stamp}.csv"
     with open(cp_path, "w", newline="", encoding="utf-8-sig") as f:
@@ -232,6 +250,11 @@ def export_training(conn, out_dir):
         print(f"Проверки, отмеченные как сделанные (ответ дня 2): {stats['d2_done']} из {stats['d2_due']} планов "
               f"[предложенный порог Д3 — 30% за 7 дней]")
     print(f"Сессий с запросом «просто дай ответ»: {stats['wants']}")
+    if stats["done"]:
+        print(f"Сдвиг механизма (детектор ложного сдвига): {stats['mech'] / stats['done']:.0%}")
+    if stats["wow_n"]:
+        print(f"«Без тренировки не пришла бы» (Нет / Скорее нет): {stats['wow_new'] / stats['wow_n']:.0%} "
+              f"из {stats['wow_n']} ответов — главный показатель момента открытия (C1)")
     print("Это сырые доли по базе, без поправок на размер выборки; выводы — по плану анализа A4.")
 
 

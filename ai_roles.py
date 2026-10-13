@@ -78,6 +78,270 @@ def classify(ai, lib, text, task, temp_taxonomy=None):
             "source": "llm", "confidence": r["confidence"], "explanation": r["explanation"]}
 
 
+# ---------- Р11. Рентген идеи (C1 §1) ----------
+
+XRAY_FIELDS = ("actor", "action", "driver", "barrier", "value", "condition")
+XRAY_NAMES = {"actor": "Кто действует", "action": "Что делает", "driver": "Что побуждает",
+              "barrier": "Какой барьер снимается", "value": "Что получает", "condition": "Сработает, если"}
+
+
+def _family_scope(lib, temp_taxonomy):
+    if temp_taxonomy:
+        return ({f["id"] for f in temp_taxonomy},
+                "\n".join(f"{f['id']} {f['name']} — {f['mechanism']}" for f in temp_taxonomy))
+    return set(lib.families) | set(lib.subfamilies), _taxonomy_text(lib)
+
+
+def xray(ai, lib, text, task, temp_taxonomy=None):
+    """Разбор идеи по тому, как она работает, а не по словам; семейство — по механизму."""
+    allowed, tax = _family_scope(lib, temp_taxonomy)
+
+    def validate(d):
+        out = {}
+        for field in XRAY_FIELDS:
+            value = (d.get(field) or "").strip() if isinstance(d.get(field), str) else ""
+            if not value:
+                raise ValueError(f"нет поля {field}")
+            out[field] = value[:160]
+        code = d.get("family_id")
+        if code is not None and code not in allowed:
+            raise ValueError("код вне таксономии")
+        out["family_id"] = code
+        out["confidence"] = d.get("confidence") if d.get("confidence") in ("high", "medium", "low") else "low"
+        return out
+
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Разбери идею пользователя как причинную конструкцию — не по словам, а по тому, как решение реально "
+        "работает. actor — кто должен что-то сделать; action — что именно он делает; driver — что побуждает его "
+        "к действию (механизм); barrier — какое препятствие при этом снимается; value — что он получает; "
+        "condition — при каком условии это сработает. Каждое поле — до 12 слов. Затем по механизму (driver и "
+        "barrier, а не по словам идеи) отнеси идею к одному семейству из списка; если ни одно не подходит — null. "
+        "Не улучшай идею и не предлагай своих. "
+        'Формат: {"actor": "...", "action": "...", "driver": "...", "barrier": "...", "value": "...", '
+        '"condition": "...", "family_id": "F06.2" или null, "confidence": "high|medium|low"}'
+    )
+    user = f"Семейства:\n{tax}\n\nЗадача пользователя: {_data(task)}\nИдея: {_data(text)}"
+    r = ai.ask_json("xray", system, user, validate, max_tokens=350, temperature=0)
+    if not r:
+        return None
+    code = r.pop("family_id")
+    conf = r.pop("confidence")
+    return {"family": (code if temp_taxonomy else code[:3]) if code else None,
+            "subfamily": code if (code and not temp_taxonomy and "." in code) else None,
+            "source": "xray", "confidence": conf, "explanation": r["driver"], "xray": r}
+
+
+# ---------- Р12. Детектор ложного сдвига (C1 §2) ----------
+
+SHIFT_KINDS = ("механизм", "форма", "нет")
+SHIFT_DIMS = ("механизм", "участник", "момент", "источник ценности", "способ доставки", "ресурсы", "аудитория")
+
+
+_SENTENCE = re.compile(r"[^.!?]+[.!?]?")
+_EXAMPLE_WORDS = ("например", "к примеру", "вы могли бы", "можно сделать", "попробуйте", "предложите",
+                  "сделайте", "такие как", "вроде")
+
+
+def _no_examples(text):
+    """Убирает из объяснения предложения с примерами решений: детектор говорит, ЧТО менять, но не КАК (П1).
+    В живом прогоне модель дописала «например, гарантии возврата средств» — это уже готовая идея."""
+    kept = [s.strip() for s in _SENTENCE.findall(text) if s.strip()
+            and not any(w in s.lower() for w in _EXAMPLE_WORDS)]
+    out = " ".join(kept).strip()
+    if not out:
+        raise ValueError("объяснение состоит из готовых решений")
+    return out
+
+
+def _xray_line(x):
+    if not x:
+        return "разбор недоступен"
+    return "; ".join(f"{XRAY_NAMES[k]}: {x.get(k, '—')}" for k in XRAY_FIELDS)
+
+
+def align_mechanism(kind, changed, kept):
+    """Вид сдвига и измерение «механизм» — одно и то же понятие: модель иногда отвечает одно, а в списках забывает.
+    Сдвиг механизма — «механизм» среди изменившегося; та же ветка — среди оставшегося."""
+    changed = [c for c in changed if c != "механизм"]
+    kept = [c for c in kept if c != "механизм"]
+    if kind == "механизм":
+        changed.insert(0, "механизм")
+    elif kind in ("форма", "нет"):
+        kept.insert(0, "механизм")
+    return changed, kept
+
+
+def shift_check(ai, base, new_text, new_xray):
+    """base — прежние идеи [{text, xray}]. Сравнение по принципу действия, а не по словам."""
+    def validate(d):
+        kind = d.get("shift")
+        if kind not in SHIFT_KINDS:
+            raise ValueError("вид сдвига")
+        changed = [c for c in (d.get("changed") or []) if c in SHIFT_DIMS] if isinstance(d.get("changed"), list) else []
+        # kept — что модель прямо назвала неизменным; не названное ни там, ни там — «не определено», а не «осталось»
+        kept = ([c for c in d["kept"] if c in SHIFT_DIMS and c not in changed]
+                if isinstance(d.get("kept"), list) else [])
+        changed, kept = align_mechanism(kind, changed, kept)
+        same = d.get("same_as")
+        same = same if isinstance(same, int) and 1 <= same <= len(base) else None
+        return {"shift": kind, "changed": changed, "kept": kept, "same_as": same,
+                "explanation": _no_examples(_short(d.get("explanation"), 400))}
+
+    listing = "\n".join(f"{i}. {_data(b['text'])} — {_xray_line(b.get('xray'))}" for i, b in enumerate(base, 1))
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Сравни новую идею пользователя с его прежними идеями по тому, КАК они работают. "
+        "«механизм» — новая идея работает за счёт другого побуждения или снимает другой барьер, чем все прежние; "
+        "«форма» — детали и слова другие, но принцип действия тот же, что у одной из прежних (её номер — в same_as); "
+        "«нет» — по сути та же идея. changed — какие измерения изменились, kept — какие точно остались прежними; "
+        f"оба — из списка: {', '.join(SHIFT_DIMS)}; измерение, о котором нельзя судить по идеям, не включай никуда. "
+        "explanation — одна-две фразы на «вы», без похвалы: что изменилось; если "
+        "«форма» или «нет» — что осталось прежним и что именно стоит поменять, чтобы сменить принцип "
+        "(не предлагая готовую идею). "
+        'Формат: {"shift": "механизм|форма|нет", "changed": ["..."], "kept": ["..."], "same_as": 1 или null, '
+        '"explanation": "..."}'
+    )
+    user = f"Прежние идеи:\n{listing}\n\nНовая идея: {_data(new_text)} — {_xray_line(new_xray)}"
+    return ai.ask_json("shift_check", system, user, validate, max_tokens=300, temperature=0)
+
+
+# Какая версия промпта работает в сервисе — пишется в события, чтобы данные пилота делились по версиям
+PROMPT_VERSIONS = {"shift_check": "v2", "lenses": "v1"}
+
+SHIFT_DIM_DEFS = (
+    "механизм — что побуждает клиента действовать и какой барьер при этом снимается; "
+    "участник — кто совершает ключевое действие; момент — когда и в какой ситуации это происходит; "
+    "источник ценности — что именно получает клиент; способ доставки — канал и формат, как решение доходит "
+    "до клиента; ресурсы — что тратит пользователь сервиса; аудитория — для какого сегмента клиентов решение"
+)
+
+
+def shift_check_v2(ai, base, new_text, task=None, goal=None):
+    """Р12, версия 2: модель сначала сама восстанавливает механизм новой идеи (рентген новой идеи идёт
+    параллельно и сюда не успевает), сравнивает с разобранными прежними идеями по механизму, а не по словам,
+    знает задачу, цель и определения измерений. Выход совместим с shift_check + new_driver/new_barrier/confidence."""
+    def validate(d):
+        kind = d.get("shift")
+        if kind not in SHIFT_KINDS:
+            raise ValueError("вид сдвига")
+        driver, barrier = _short(d.get("new_driver"), 200), _short(d.get("new_barrier"), 200)
+        changed = [c for c in d["changed"] if c in SHIFT_DIMS] if isinstance(d.get("changed"), list) else []
+        kept = ([c for c in d["kept"] if c in SHIFT_DIMS and c not in changed]
+                if isinstance(d.get("kept"), list) else [])
+        changed, kept = align_mechanism(kind, changed, kept)
+        same = d.get("same_as")
+        same = same if isinstance(same, int) and 1 <= same <= len(base) else None
+        conf = d.get("confidence") if d.get("confidence") in ("high", "medium", "low") else "low"
+        return {"shift": kind, "changed": changed, "kept": kept, "same_as": same, "confidence": conf,
+                "new_driver": driver, "new_barrier": barrier,
+                "explanation": _no_examples(_short(d.get("explanation"), 400))}
+
+    listing = "\n".join(f"{i}. {_data(b['text'])} — {_xray_line(b.get('xray'))}" for i, b in enumerate(base, 1))
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Ты — аналитик механизмов решений. Определи, сменился ли причинный механизм новой идеи по сравнению "
+        "с прежними идеями пользователя. Механизм — это то, что побуждает клиента изменить поведение, и барьер, "
+        "который при этом снимается. Слова, канал, размер выгоды, время акции, упаковка и оформление — НЕ механизм. "
+        "Порядок работы: 1) восстанови для новой идеи new_driver (что побуждает клиента действовать) и new_barrier "
+        "(какой барьер снимается), каждое до 12 слов; 2) сравни их с механизмами прежних идей — они даны разбором; "
+        "3) выбери класс. «механизм» — побуждение или снимаемый барьер другие, чем у ВСЕХ прежних идей; «форма» — "
+        "побуждение и барьер те же, что у одной из прежних (её номер — в same_as), меняются канал, размер, время, "
+        "посредники, упаковка; «нет» — по сути та же идея (номер — в same_as). Типичная ловушка: скидка, бонус, "
+        "подарок, кешбэк, купон, «каждый N-й бесплатно», пробное за символическую цену — один механизм "
+        "(материальная выгода или снижение цены входа), это «форма» относительно такой же прежней идеи; реклама "
+        "в другом канале — «форма» относительно прежней рекламы. Обратная ловушка: если клиент получает другую "
+        "ценность или действовать начинает другой участник ради другой причины — это «механизм», даже если "
+        "слова похожи. Смена механизма — не оценка качества: не хвали и не ругай. "
+        f"Измерения: {SHIFT_DIM_DEFS}. changed — изменившиеся измерения, kept — точно оставшиеся; о чём нельзя "
+        "судить — никуда. confidence — high, medium или low (low, если идея описана слишком скупо). "
+        "explanation — одна-две фразы на «вы»: что изменилось в механизме; для «формы» и «нет» — что осталось "
+        "прежним и что стоит поменять, чтобы сменить принцип, не предлагая готовую идею. "
+        'Формат: {"new_driver": "...", "new_barrier": "...", "shift": "механизм|форма|нет", "same_as": 1 или null, '
+        '"changed": ["..."], "kept": ["..."], "confidence": "high|medium|low", "explanation": "..."}'
+    )
+    user = (f"Задача: {_data(task)}\nЦель: {_data(goal)}\n\nПрежние идеи пользователя:\n{listing}\n\n"
+            f"Новая идея: {_data(new_text)}")
+    return ai.ask_json("shift_check", system, user, validate, max_tokens=450, temperature=0)
+
+
+# ---------- Р13. Три линзы на задачу (C1 §3) ----------
+
+LENSES = ("system", "behavior", "value")
+LENS_NAMES = {"system": "Как система", "behavior": "Как поведение клиента", "value": "Как обмен ценностью"}
+
+
+def _leaks_idea(lib, text):
+    low = text.lower()
+    code, _ = lib.classifier.classify(text)
+    return bool(code and any(w in low for w in ACTION_WORDS))
+
+
+def lenses(ai, lib, task_text, goal, card_text, first_ideas=None):
+    """Три разных модели одной задачи; в каждой — главное препятствие (наблюдение, не решение) и вопрос.
+
+    first_ideas — первые идеи человека (фаворит первым): по ним модель видит, что он уже заметил, и ищет
+    препятствия, которых его идеи не касаются (C1 §4). Без них — прежний промпт."""
+    def validate(d):
+        out = {}
+        for lens in LENSES:
+            item = d.get(lens)
+            if not isinstance(item, dict):
+                raise ValueError(f"нет линзы {lens}")
+            barrier, question = _short(item.get("barrier"), 220), _short(item.get("question"), 220)
+            if _leaks_idea(lib, barrier) or _leaks_idea(lib, question):
+                raise ValueError("в линзе готовое решение")
+            out[lens] = {"barrier": barrier, "question": question}
+        return out
+
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Посмотри на задачу пользователя через три разные модели и в каждой назови ГЛАВНОЕ препятствие, которое, "
+        "вероятно, мешает результату, — наблюдение, а не решение. "
+        "system — задача как система: какие элементы участвуют и где узкое место; "
+        "behavior — задача как поведение клиента: чего он хочет, чего избегает, что мешает ему сделать первый шаг; "
+        "value — задача как обмен ценностью: что каждая сторона отдаёт и получает и где обмен для неё невыгоден. "
+        "Для каждой: barrier — одно конкретное наблюдение про эту задачу (до 25 слов); question — один открытый "
+        "вопрос, который помогает искать решение вокруг этого препятствия. Запрещены советы, готовые идеи, "
+        "призывы «сделайте», «предложите», «создайте». "
+        'Формат: {"system": {"barrier": "...", "question": "..."}, "behavior": {...}, "value": {...}}'
+    )
+    user = f"Задача: {_data(task_text)}\nЦель: {_data(goal)}\nКарточка ресурсов: {_data(card_text)}"
+    if first_ideas:
+        # Первая попытка («назови препятствие, которого идеи не касаются», с примером про цену) на эталоне
+        # ухудшила результат и чаще срывалась в советы — пример тянул к уже знакомому. Поэтому: сначала модель
+        # одной фразой называет, что идеи уже затрагивают (covered), потом ищет препятствия за пределами этого.
+        system = system.replace('Формат: {"system"', 'Формат: {"covered": "...", "system"') + (
+            " Человек уже придумал первые идеи — они показывают, что он заметил сам. Сначала в covered одной фразой "
+            "назови препятствие, против которого направлены его идеи. Затем в каждой линзе назови препятствие, "
+            "которое лежит ЗА пределами covered, и вопрос, который не ведёт обратно к covered. Идеи не пересказывай "
+            "и не оценивай."
+        )
+        user += "\nПервые идеи пользователя (первая — любимая):\n" + "\n".join(
+            f"{i}. {_data(t)}" for i, t in enumerate(first_ideas, 1))
+    return ai.ask_json("lenses", system, user, validate, max_tokens=700, temperature=0.4)
+
+
+# ---------- Р14. Перевёрнутая задача (C1 §4) ----------
+
+def reframe(ai, lib, task_text, goal, favorite):
+    """Цель за целью: ради чего человеку нужна его цель. Вопрос собирает код по шаблону UI-178 —
+    в живом прогоне модель вместо «другого пути» пересказывала исходную цель."""
+    def validate(d):
+        behind = _short(d.get("goal_behind"), 160).rstrip(".")
+        if behind.lower() in goal.lower() or goal.lower() in behind.lower():
+            raise ValueError("та же цель другими словами")
+        if _leaks_idea(lib, behind):
+            raise ValueError("в цели готовое решение")
+        return {"goal_behind": behind}
+
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Найди цель на уровень выше: ради чего пользователю нужна его цель. Это должно быть то, чего можно "
+        "добиться и другими путями — даже если исходная цель так и не будет достигнута. Не повторяй исходную "
+        "цель другими словами, не предлагай способов и не оценивай. Одна короткая фраза в именительном падеже, "
+        "без точки. "
+        'Формат: {"goal_behind": "..."}'
+    )
+    user = f"Задача: {_data(task_text)}\nЦель: {_data(goal)}\nЛюбимая идея пользователя: {_data(favorite or 'нет')}"
+    return ai.ask_json("reframe", system, user, validate, max_tokens=200, temperature=0.3)
+
+
 # ---------- Р2. Временная таксономия и проверка задачи ----------
 
 def check_task(ai, task_text, goal):

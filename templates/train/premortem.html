@@ -2,20 +2,21 @@
 {% block title %}Проверка на прочность — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
-<h1>Проверка на прочность</h1>
-<div class="box"><p><b>Ваша идея:</b> {{ final.text }}</p></div>
+<span class="eyebrow">Проверка на прочность</span>
+<h1>Где идея может сломаться</h1>
+<div class="panel task-card"><span class="caption">Ваша идея</span><p style="font-weight:700;margin:6px 0 0"><span class="sr-only">Ваша идея:</span> {{ final.text }}</p></div>
 
 {% if phase == "reasons" %}
-  <form method="post">
+  <form method="post" data-busy="Критик ищет, что ещё может помешать…">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="reasons">
-    <p><b>{{ frame }}</b></p>
+    <p style="font-size:var(--fs-lead);font-weight:700">{{ frame }}</p>
     {% if errors.reasons %}<p class="error">{{ errors.reasons }}</p>{% endif %}
     <label>Причина 1 <input type="text" name="reason1" maxlength="300"></label>
     <label>Причина 2 <input type="text" name="reason2" maxlength="300"></label>
     <p class="muted">{{ ui("UI-102") }}</p>
     <label><input type="checkbox" name="none" value="1"> Не могу назвать ни одной</label>
-    <p><button type="submit">Дальше</button></p>
+    <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
   </form>
 
 {% elif phase in ("defense", "round2") %}
@@ -23,28 +24,31 @@
   <p><b>{{ ui("UI-103") }}</b></p>
   {% if phase == "round2" %}<p class="muted">{{ ui("UI-113") }}</p>{% endif %}
   {% if errors.round %}<p class="error">{{ errors.round }}</p>{% endif %}
-  <form method="post">
+  <form method="post" data-busy="Судья выносит вердикты…">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="defend">
     {% for o in critic if phase == "defense" or o.verdict in ("в силе", "ослаблено") %}
       {% set v = values.get(o.id, {}) %}
-      <fieldset>
-        <p>{{ line(o) }}</p>
+      <fieldset class="objection">
+        <p style="font-weight:600">{{ line(o) }}</p>
         {% if phase == "round2" %}<p class="muted">Сейчас: {{ verdict(o) }}</p>{% endif %}
         {% if errors[o.id] %}<p class="error">{{ errors[o.id] }}</p>{% endif %}
         {% if phase == "defense" %}
+          <div class="choices-inline">
           <label><input type="radio" name="about_{{ o.id }}" value="1" {% if v.about == "1" %}checked{% endif %}> Это про меня</label>
           <label><input type="radio" name="about_{{ o.id }}" value="0" {% if v.about == "0" %}checked{% endif %}> Не про меня</label>
+          </div>
         {% endif %}
-        <p>Как отвечаете?
+        <p class="caption" style="margin-top:var(--s3)">Как отвечаете?</p>
+        <div class="choices-inline">
           {% for key, name in types.items() %}
             <label><input type="radio" name="type_{{ o.id }}" value="{{ key }}" {% if v.type == key %}checked{% endif %}> {{ name }}</label>
           {% endfor %}
-        </p>
+        </div>
         <label>Ответ <input type="text" name="text_{{ o.id }}" maxlength="400" value="{{ v.text or '' }}"></label>
       </fieldset>
     {% endfor %}
-    <p><button type="submit">Отправить ответы</button></p>
+    <div class="actions"><button type="submit" class="primary">Отправить ответы</button><span class="busy-note" aria-live="polite"></span></div>
   </form>
 
 {% else %}
@@ -52,21 +56,23 @@
     <p>{{ ui("UI-111") }}</p>
   {% else %}
     {% for o in critic %}
-      <div class="box">
+      <div class="objection {{ 'is-removed' if o.verdict == 'снято' else ('is-weak' if o.verdict == 'ослаблено' else '') }} reveal">
         <p>{{ line(o) }}</p>
         <p class="muted">Ваш ответ ({{ types.get(o.response_type, "—") }}): {{ o.response_text or "—" }}</p>
-        <p><b>{{ verdict(o) }}</b></p>
+        <p class="verdict">{{ verdict(o) }}</p>
         {% if o.basis == "факт" %}<p class="muted">{{ ui("UI-114") }}</p>{% endif %}
         {% if o.verdict == "в силе" and o.basis == "нет" and o.response_type == "argument" %}<p class="muted">{{ ui("UI-113") }}</p>{% endif %}
       </div>
     {% endfor %}
   {% endif %}
-  {% if strongest %}<p><b>{{ ui("UI-110", возражение=objection_text(strongest)) }}</b></p>
+  {% if strongest %}<p class="callout callout--risk"><b>{{ ui("UI-110", возражение=objection_text(strongest)) }}</b></p>
   {% elif critic %}<p>Все возражения сняты.</p>{% endif %}
   <form method="post">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    {% if can_round2 %}<p><button type="submit" name="action" value="round2">Ответить на вердикты ещё раз</button></p>{% endif %}
-    <p><button type="submit" name="action" value="finish">Дальше</button></p>
+    <div class="actions">
+    <button type="submit" name="action" value="finish" class="primary">Дальше</button>
+    {% if can_round2 %}<button type="submit" name="action" value="round2">Ответить на вердикты ещё раз</button>{% endif %}
+    </div>
   </form>
 {% endif %}
 

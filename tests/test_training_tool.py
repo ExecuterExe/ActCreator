@@ -141,9 +141,12 @@ class ToolTypesTest(TrainingCase):
         self.post(f"/s/{sid}/tool", {"action": "soften"})
         self.assertIn("Облегчение:", self.session_json(sid, "tool_json")["task_text"])
 
-    def test_crossing_falls_back_without_rare_pair(self):
+    def test_crossing_uses_principles_without_rare_pair(self):
+        """C1 §6: нет двух редких идей — скрещиваем два незанятых принципа, а не уходим в оператор."""
         sid, page, tool = self.tool_for("Д5", "crossing")
-        self.assertEqual(tool["type"], "operator")
+        self.assertEqual((tool["type"], tool["principles"]), ("crossing", True))
+        self.assertIn("Принцип A", page)
+        self.assertNotIn("[мА]", tool["task_text"])
 
     def test_crossing_with_two_rare_ideas(self):
         sid = self.to_tool(ideas=["Скидка новым клиентам", "Петь песни у входа"])

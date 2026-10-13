@@ -8,8 +8,9 @@
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 <form method="post" id="cp-form">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-  <textarea name="ideas" rows="12" autofocus></textarea>
-  <p><button type="submit">Готово</button></p>
+  <label>Ваши идеи — по одной на строку
+    <textarea name="ideas" rows="12" autofocus></textarea></label>
+  <div class="actions"><button type="submit" class="primary">Готово</button></div>
 </form>
 <script>
 (function () {

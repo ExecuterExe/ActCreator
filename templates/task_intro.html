@@ -2,7 +2,7 @@
 {% block title %}Шаг 4 из 5. Задача — АктКреватор{% endblock %}
 {% block content %}
 <h1>Шаг 4 из 5. Задача на 3 минуты</h1>
-<div class="box">
+<div class="panel task-card">
   <p><b>Задача:</b> {{ task.text }}</p>
   <p>{{ task.instruction }}</p>
 </div>
@@ -11,5 +11,5 @@
   <li>Не пользуйтесь ИИ и поиском: нам важен ваш собственный ход мысли.</li>
   <li>Таймер запустится после нажатия кнопки и не остановится, если обновить страницу.</li>
 </ul>
-<p><a class="button" href="{{ url_for('test_task', go=1) }}">Начать — запустить таймер</a></p>
+<div class="actions"><a class="button primary" href="{{ url_for('test_task', go=1) }}">Начать — запустить таймер</a></div>
 {% endblock %}

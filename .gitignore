@@ -4,3 +4,6 @@ instance/
 exports/
 .venv/
 __pycache__/
+
+# Ответы прогонов eval_prompts.py
+eval/results/

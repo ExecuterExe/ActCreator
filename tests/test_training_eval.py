@@ -5,23 +5,30 @@ from helpers import TrainingCase
 
 
 class EvalNoAITest(TrainingCase):
-    def test_no_shift_retry_once(self):
+    def test_false_shift_and_improve_once(self):
+        """Та же «выгода» в новой форме: тип «новая по форме», доработка — один раз, версии растут (C1 §2, §7)."""
         sid = self.to_eval(final="Скидка 30% новым клиентам")
         ev = self.session_json(sid, "eval_json")
-        self.assertEqual((ev["family"], ev["shift"], ev["rare"] is not None), ("F07", False, True))
+        self.assertEqual((ev["family"], ev["shift"], ev["shift_kind"]), ("F07", False, "форма"))
+        self.assertEqual((ev["novelty"], ev["type_ui"], ev["improve"]), ("низкая", "UI-198", "mechanism"))
         page = self.page(f"/s/{sid}/eval")
-        self.assertIn("Сдвига пока нет: это снова", page)
-        self.assertIn("Ещё 3 минуты", page)
-        self.post(f"/s/{sid}/eval", {"action": "retry"})
+        self.assertIn("Новая по форме, старая по механизму", page)
+        self.assertIn("Доработать слабую сторону", page)
+        self.post(f"/s/{sid}/eval", {"action": "improve"})
         self.assertEqual(self.state(sid), "idea")
-        stages = {r["stage"] for r in self.q("SELECT stage FROM ideas WHERE text = 'Скидка 30% новым клиентам'")}
-        self.assertEqual(stages, {"draft", "retry"})
         self.assertIsNone(self.session_json(sid, "eval_json"))
-        self.idea(sid, "submit", "Скидка 40% постоянным")
-        page = self.page(f"/s/{sid}/eval")
-        self.assertNotIn("Ещё 3 минуты", page)  # повтор — один раз
-        self.assertEqual(self.post(f"/s/{sid}/eval", {"action": "retry"}).status_code, 400)
-        self.assertEqual(len(self.q("SELECT * FROM ideas WHERE stage = 'final'")), 1)
+        page = self.page(f"/s/{sid}/idea")
+        self.assertIn("Доработка:", page)
+        self.assertIn("Скидка 30% новым клиентам", page)  # доработка начинается с текста прошлой версии
+        self.submit_final(sid, "Стенд на книжной ярмарке")
+        versions = self.q("SELECT version, stage FROM ideas WHERE stage IN ('version', 'final') ORDER BY version")
+        self.assertEqual([(v["version"], v["stage"]) for v in versions], [(1, "version"), (2, "final")])
+        ev = self.session_json(sid, "eval_json") or {}
+        self.page(f"/s/{sid}/eval")
+        ev = self.session_json(sid, "eval_json")
+        self.assertEqual((ev["versions"], ev["shift_kind"]), (2, "механизм"))
+        self.assertNotIn("Доработать слабую сторону", self.page(f"/s/{sid}/eval"))  # один раз за сессию
+        self.assertEqual(self.post(f"/s/{sid}/eval", {"action": "improve"}).status_code, 400)
 
     def test_shift_and_rules_rubric(self):
         sid = self.to_eval()
@@ -64,7 +71,7 @@ class EvalNoAITest(TrainingCase):
         sid = self.to_idea()
         self.post(f"/s/{sid}/idea", {"hint": "fragment"})
         hint = self.q("SELECT text FROM hints")[0]["text"]
-        self.idea(sid, "submit", hint)
+        self.submit_final(sid, hint)
         page = self.page(f"/s/{sid}/eval")
         ev = self.session_json(sid, "eval_json")
         self.assertEqual(ev["hints"], 1)

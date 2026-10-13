@@ -40,11 +40,13 @@
   <form method="post">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="stop">
-    <p>{{ ui("UI-164").split("?")[0] }}? Можно не отвечать.</p>
-    {% for o in stop_options %}<label><input type="radio" name="reason" value="{{ o }}"> {{ o }}</label><br>{% endfor %}
+    <fieldset>
+      <legend>{{ ui("UI-164").split("?")[0] }}? Можно не отвечать.</legend>
+      {% for o in stop_options %}<label><input type="radio" name="reason" value="{{ o }}"> {{ o }}</label>{% endfor %}
+    </fieldset>
     <button type="submit">Отправить</button>
   </form>
   <p class="muted">{{ ui("UI-162") }}</p>
 </details>
-<p><a href="{{ url_for('me') }}">В кабинет</a></p>
+<p><a class="back-link" href="{{ url_for('me') }}">В кабинет</a></p>
 {% endblock %}

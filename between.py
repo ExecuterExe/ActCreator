@@ -199,18 +199,14 @@ def idea_card(idea_id):
             flash("Идея удалена.")
             return redirect(url_for("between.bank"))
         abort(400)
+    import training  # история сессии собирается так же, как в журнале идеи
     s = db.execute("SELECT * FROM sessions WHERE id = ?", (idea["sid"],)).fetchone()
-    first = db.execute("SELECT * FROM ideas WHERE session_id = ? AND stage = 'first' ORDER BY ord",
-                       (s["id"],)).fetchall()
-    objections = db.execute("SELECT * FROM objections WHERE session_id = ? AND author = 'critic' ORDER BY id",
-                            (s["id"],)).fetchall()
-    exp = db.execute("SELECT * FROM experiments WHERE session_id = ?", (s["id"],)).fetchone()
-    outcomes = db.execute("SELECT * FROM outcomes WHERE session_id = ? ORDER BY day", (s["id"],)).fetchall()
+    story = training.session_story(s)
+    # эта идея как ступень эволюции: версия, итог или «второе открытие» (у дополнительных идей ступени нет)
+    view = next((v for v in story["versions"] + story["incubations"] if v["id"] == idea["id"]), None)
     pending = [o for o in due_outcomes(g.user["id"]) if o["sid"] == s["id"]]
-    return render_template("between/idea.html", idea=idea, s=s, task=loads(s["task_json"], {}),
-                           tool=loads(s["tool_json"], {}), first=first, objections=objections, exp=exp,
-                           outcomes=outcomes, pending=pending, statuses=STATUS_GROUPS,
-                           refuse=refuse_reasons())
+    return render_template("between/idea.html", idea=idea, s=s, view=view, pending=pending, statuses=STATUS_GROUPS,
+                           refuse=refuse_reasons(), **story)
 
 
 # ---------- контрольные точки: индекс первой мысли (B5 §3, A4 §2.8) ----------
@@ -602,4 +598,92 @@ def me_context():
         "questions": questions[:3], "n_questions": len(questions),
         "cp": checkpoint_status(uid) if n_done else None, "open_cp": open_checkpoint(uid),
         "has_card": bool(state["card_json"]), "refuse": refuse_reasons(),
+        "incubations": due_incubations(uid), "profile": mechanism_profile(uid),
     }
+
+
+# ---------- «Второе открытие» (C1 §6): по желанию человека, без напоминаний ----------
+
+def due_incubations(uid):
+    rows = get_db().execute(
+        "SELECT i.*, s.task_json FROM incubations i JOIN sessions s ON s.id = i.session_id "
+        "WHERE s.user_id = ? AND i.answered_at IS NULL ORDER BY i.id", (uid,)).fetchall()
+    return [dict(r, task=loads(r["task_json"], {}).get("text", "")) for r in rows
+            if parse_time(r["due"]) and parse_time(r["due"]) <= now()]
+
+
+@bp.post("/incubation/<int:sid>")
+@login_required
+def incubation(sid):
+    import training  # функции сессии: рентген и детектор сдвига
+    uid = g.user["id"]
+    item = next((i for i in due_incubations(uid) if i["session_id"] == sid), None)
+    if item is None:
+        abort(404)
+    reframe = (request.form.get("reframe") or "").strip()[:300]
+    barrier = (request.form.get("barrier") or "").strip()[:300]
+    idea = (request.form.get("idea") or "").strip()[:600]
+    if not reframe:
+        flash("Сформулируйте задачу заново одним предложением.")
+        return redirect(url_for("me"))
+    db = get_db()
+    s = db.execute("SELECT * FROM sessions WHERE id = ?", (sid,)).fetchone()
+    idea_id, kind = None, None
+    if idea:
+        td = loads(s["task_json"], {})
+        versions = training.versions_of(sid)
+        cls = training.xray_many(td, [idea])[0]
+        change = training.compare_version(s, idea, cls, versions[-1] if versions else None)
+        idea_id, _ = training.store_idea(sid, "incubation", 1, idea, td, cls=cls,
+                                         version=len(versions) + 1, change=change)
+        db.execute("UPDATE ideas SET status = 'второе открытие' WHERE id = ?", (idea_id,))
+        kind = ((change.get("vs_prev") or change.get("vs_first")) or {}).get("shift")
+    db.execute("UPDATE incubations SET reframe = ?, barrier = ?, idea_id = ?, answered_at = ? WHERE id = ?",
+               (reframe, barrier or None, idea_id, now_iso(), item["id"]))
+    db.commit()
+    log_event("incubation_answered", {"session": sid, "has_idea": bool(idea), "shift": kind})
+    if kind == "механизм":
+        flash("Новая идея работает иначе, чем прежние версии. Она сохранена в банке идей.")
+    elif idea:
+        flash("Новая идея сохранена в банке идей. По механизму она близка к прежней версии.")
+    else:
+        flash("Ответ сохранён. Новая формулировка задачи — тоже результат.")
+    return redirect(url_for("me"))
+
+
+# ---------- Профиль привычных механизмов (C1 §8) ----------
+
+PROFILE_MIN_SESSIONS = 3
+
+
+def mechanism_profile(uid):
+    """После 3+ тренировок: с каких механизмов человек обычно начинает. Наблюдение, а не черта характера."""
+    db = get_db()
+    sessions = db.execute("SELECT id FROM sessions WHERE user_id = ? AND state = 'done' ORDER BY id",
+                          (uid,)).fetchall()
+    if len(sessions) < PROFILE_MIN_SESSIONS:
+        return None
+    families, favorites = [], []
+    for s in sessions:
+        for i in db.execute("SELECT family, is_favorite FROM ideas WHERE session_id = ? AND stage = 'first'",
+                            (s["id"],)):
+            if i["family"] and i["family"][:1] == "F":
+                families.append(i["family"][:3])
+                if i["is_favorite"]:
+                    favorites.append(i["family"][:3])
+    top = engine.mechanism_profile(families)
+    if not top:
+        return None
+    recent = engine.mechanism_profile(favorites[-3:], top=1)
+    lead = lib().family_name(recent[0][0]) if recent else lib().family_name(top[0][0])
+    listing = ", ".join(f"«{lib().family_name(f)}» ({n})" for f, n in top)
+    return {"text": lib().t("UI-206", список=listing, механизм=lead),
+            "note": lib().t("UI-207", n=len(sessions)), "top": [f for f, _ in top]}
+
+
+@bp.post("/profile/dispute")
+@login_required
+def profile_dispute():
+    log_event("profile_disputed", {"comment": (request.form.get("comment") or "").strip()[:300]})
+    flash("Отметили. Профиль — это наблюдение, и ваше несогласие тоже учитывается.")
+    return redirect(url_for("me"))

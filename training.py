@@ -351,7 +351,7 @@ class Taxonomy:
         return code if self.temp else code[:3]
 
 
-CLASSIFY_WORKERS = 6
+CLASSIFY_WORKERS = 4  # больше одновременных вызовов — чаще отказ 429 у провайдера (живой прогон 2026-10-12)
 NO_CLASS = {"family": None, "subfamily": None, "source": "none", "confidence": None, "explanation": None}
 
 
@@ -368,26 +368,66 @@ def classify_many(task_data, texts):
     results = [None if temp else engine.classify_by_dictionary(lib(), t) for t in texts]
     pending = [i for i, r in enumerate(results) if not r]
     if pending and ai().available:
-        events = []  # журнал событий пишем в основном потоке: у рабочих потоков нет контекста приложения
-        worker = llm.AI(ai().client, on_event=lambda name, props: events.append((name, props)))
         library, task_text = lib(), task_data.get("text")
-        with ThreadPoolExecutor(max_workers=min(CLASSIFY_WORKERS, len(pending))) as pool:
-            futures = {i: pool.submit(ai_roles.classify, worker, library, texts[i], task_text, temp) for i in pending}
-            for i, future in futures.items():
-                results[i] = future.result()
-        for name, props in events:
-            log_event(name, props)
+        found = run_ai_parallel([lambda w, t=texts[i]: ai_roles.classify(w, library, t, task_text, temp)
+                                 for i in pending])
+        for i, r in zip(pending, found):
+            results[i] = r
     return [r or dict(NO_CLASS) for r in results]
 
 
-def store_idea(sid, stage, ord_, text, task_data, favorite=False, cls=None):
-    c = cls or classify_text(task_data, text)
+def run_ai_parallel(jobs):
+    """jobs — функции job(worker_ai). Вызовы модели идут параллельно; события пишем в основном потоке,
+    потому что у рабочих потоков нет контекста приложения."""
+    if not jobs:
+        return []
+    events = []
+    worker = llm.AI(ai().client, on_event=lambda name, props: events.append((name, props)))
+    with ThreadPoolExecutor(max_workers=min(CLASSIFY_WORKERS, len(jobs))) as pool:
+        results = [f.result() for f in [pool.submit(job, worker) for job in jobs]]
+    for name, props in events:
+        log_event(name, props)
+    return results
+
+
+def xray_many(task_data, texts):
+    """Рентген идей пользователя (C1 §1): с ИИ — разбор по механизму, без ИИ — словарь LIB-02.
+
+    Словарь ищет слова, поэтому для идей человека ИИ идёт первым: в живом прогоне «обложка-образец…
+    портфолио» словарь отнёс к «Своему контенту» по слову «портфолио», хотя механизм другой.
+    """
+    if not ai().available:
+        return classify_many(task_data, texts)
+    return finish_xray(task_data, texts, run_ai_parallel(xray_jobs(task_data, texts)))
+
+
+def xray_jobs(task_data, texts):
+    """Задания рентгена для run_ai_parallel — чтобы запускать их вместе с другими вызовами модели."""
+    library, task_text, temp = lib(), task_data.get("text"), task_data.get("temp_taxonomy")
+    return [lambda w, t=t: ai_roles.xray(w, library, t, task_text, temp) for t in texts]
+
+
+def finish_xray(task_data, texts, results):
+    temp = task_data.get("temp_taxonomy")
+    library = lib()
+    results = list(results)
+    missing = [i for i, r in enumerate(results) if not r]
+    if missing:  # ИИ не ответил — словарь, чтобы не остаться без направления
+        backup = [None if temp else engine.classify_by_dictionary(library, texts[i]) for i in missing]
+        for i, r in zip(missing, backup):
+            results[i] = r
+    return [r or dict(NO_CLASS) for r in results]
+
+
+def store_idea(sid, stage, ord_, text, task_data, favorite=False, cls=None, version=None, change=None):
+    c = cls or xray_many(task_data, [text])[0]
     db = get_db()
     cur = db.execute(
         "INSERT INTO ideas (session_id, stage, ord, text, is_favorite, family, subfamily, class_source, confidence, "
-        "explanation, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "explanation, xray_json, version, change_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (sid, stage, ord_, text, int(favorite), c["family"], c["subfamily"], c["source"], c["confidence"],
-         c["explanation"], now_iso()))
+         c["explanation"], dumps(c["xray"]) if c.get("xray") else None, version,
+         dumps(change) if change else None, now_iso()))
     db.commit()
     return cur.lastrowid, c
 
@@ -411,7 +451,18 @@ def first_step(s):
         elif fav not in [i for i, _ in filled]:
             errors["favorite"] = lib().t("UI-028")
         if not errors:
-            classes = classify_many(c["task_data"], [text for _, text in filled])
+            td, texts = c["task_data"], [text for _, text in filled]
+            if ai().available:
+                # рентген идей, три линзы и ответы чат-бота не зависят друг от друга — один параллельный заход,
+                # зеркало потом берёт готовое (в живом прогоне последовательно выходило 20+ секунд)
+                library, card_line = lib(), card_text(loads(s["card_json"], {}))
+                results = run_ai_parallel(xray_jobs(td, texts) + [
+                    lambda w: ai_roles.lenses(w, library, td.get("text", ""), td.get("goal", ""), card_line),
+                    lambda w: ai_roles.baseline(w, td.get("text", ""))])
+                classes = finish_xray(td, texts, results[:len(texts)])
+                flags_update(s, prefetch={"lenses": results[-2], "answers": results[-1] or []})
+            else:
+                classes = xray_many(td, texts)
             for n, ((i, text), cls) in enumerate(zip(filled, classes), 1):
                 store_idea(s["id"], "first", n, text, c["task_data"], favorite=(i == fav), cls=cls)
             flags_update(s, why=values["why"], dont_know=values["dont_know"])
@@ -453,9 +504,11 @@ def user_first_families(uid, exclude_sid=None):
     return list(per.values())
 
 
-def build_baseline(s, task_data):
-    if ai().available:
+def build_baseline(s, task_data, answers=None):
+    """answers — уже полученные ответы чат-бота ([] — ИИ пробовали, не вышло; None — ещё не спрашивали)."""
+    if answers is None and ai().available:
         answers = ai_roles.baseline(ai(), task_data.get("text", ""))
+    if ai().available:
         if answers:
             classes = classify_many(task_data, answers)
             return [{"text": a, "family": cl["family"]} for a, cl in zip(answers, classes)], "ai"
@@ -484,13 +537,25 @@ def similar_baseline(task_text):
     return best[1] if best[0] >= 2 else None
 
 
-def compute_mirror(s, keep_baseline=None):
+def compute_mirror(s, keep_baseline=None, keep_lenses=None):
     td = loads(s["task_json"], {})
     tax = Taxonomy(td)
     card = loads(s["card_json"], {})
     ideas = ideas_of(s["id"], "first")
+    lenses = keep_lenses
+    prefetch = loads(s["flags_json"], {}).get("prefetch")
     if keep_baseline is not None:
         baseline, b_source = keep_baseline
+    elif prefetch is not None and ai().available:  # линзы и ответы чат-бота получены вместе с рентгеном
+        lenses = prefetch.get("lenses")
+        baseline, b_source = build_baseline(s, td, answers=prefetch.get("answers") or [])
+    elif ai().available:  # ответы чат-бота и три линзы зависят только от задачи — спрашиваем параллельно
+        # всё, что требует контекста приложения (lib, card_text), — до запуска потоков
+        library, text, goal, card_line = lib(), td.get("text", ""), td.get("goal", ""), card_text(card)
+        lenses, answers = run_ai_parallel([
+            lambda w: ai_roles.lenses(w, library, text, goal, card_line),
+            lambda w: ai_roles.baseline(w, text)])
+        baseline, b_source = build_baseline(s, td, answers=answers or [])
     else:
         baseline, b_source = build_baseline(s, td)
     base_f = [tax.fam(b["family"]) for b in baseline if b.get("family")]
@@ -519,6 +584,7 @@ def compute_mirror(s, keep_baseline=None):
         "n_ideas": len(ideas), "n_families": len(set(rec)),
         "n_common": sum(1 for f in rec if f in common),
         "overlap": sorted(set(rec) & set(base_f)),
+        "lenses": lenses, "lens_source": "ai" if lenses else "template",
     }
 
 
@@ -564,7 +630,9 @@ def mirror_step(s):
         mirror = compute_mirror(s)
         save(s["id"], mirror_json=dumps(mirror))
         log_event("mirror_shown", {"session": s["id"], "n_common": mirror["n_common"],
-                                   "source": mirror["common_source"], "baseline": mirror["baseline_source"]})
+                                   "source": mirror["common_source"], "baseline": mirror["baseline_source"],
+                                   "lens_source": mirror.get("lens_source"),
+                                   "lens_prompt": ai_roles.PROMPT_VERSIONS["lenses"]})
     if request.method == "POST":
         action = request.form.get("action")
         if action == "dispute":
@@ -581,13 +649,42 @@ def mirror_step(s):
                 db.commit()
                 log_event("classification_disputed", {"session": s["id"], "from": idea["family"], "to": fam})
                 s = load_session(s["id"])
-                mirror = compute_mirror(s, keep_baseline=(mirror["baseline"], mirror["baseline_source"]))
+                mirror = compute_mirror(s, keep_baseline=(mirror["baseline"], mirror["baseline_source"]),
+                                        keep_lenses=mirror.get("lenses"))
                 save(s["id"], mirror_json=dumps(mirror))
             return go(s["id"], "mirror")
+        if action == "fix_mechanism":  # «Мы поняли идею не так?» — человек поправляет разбор (C1 §1)
+            idea_id = request.form.get("idea_id", type=int)
+            text = (request.form.get("driver") or "").strip()[:200]
+            db = get_db()
+            idea = db.execute("SELECT * FROM ideas WHERE id = ? AND session_id = ?", (idea_id, s["id"])).fetchone()
+            if idea and text:
+                x = loads(idea["xray_json"], {}) or {}
+                x["driver_user"] = text
+                db.execute("UPDATE ideas SET xray_json = ?, disputed = 1 WHERE id = ?", (dumps(x), idea_id))
+                db.commit()
+                log_event("xray_corrected", {"session": s["id"], "idea": idea_id})
+            return go(s["id"], "mirror")
         if action == "continue":
+            lens = request.form.get("lens")
+            own = (request.form.get("own_barrier") or "").strip()[:200]
+            lenses = mirror.get("lenses") or {}
+            barrier = None
+            if own:
+                barrier = {"lens": lens if lens in ai_roles.LENSES else "own", "text": own, "source": "user"}
+            elif lens in lenses:
+                barrier = {"lens": lens, "text": lenses[lens]["barrier"], "question": lenses[lens]["question"],
+                           "source": "ai"}
+            elif lens in ai_roles.LENSES:  # без ИИ: человек выбрал вопрос-линзу, но препятствие не сформулировал
+                barrier = {"lens": lens, "text": None, "question": lib().t(engine.LENS_FALLBACK[lens]),
+                           "source": "template"}
+            if barrier:
+                flags_update(s, barrier=barrier)
+                s = load_session(s["id"])
             diag = diagnose_session(s, mirror)
             save(s["id"], diagnosis_json=dumps(diag), state="tool")
-            log_event("diagnosis_made", {"session": s["id"], "code": diag["code"], "tool": diag["tool_type"]})
+            log_event("diagnosis_made", {"session": s["id"], "code": diag["code"], "tool": diag["tool_type"],
+                                         "lens": barrier["lens"] if barrier else None})
             return go(s["id"], "tool")
         abort(400)
     ideas = ideas_of(s["id"], "first")
@@ -595,11 +692,21 @@ def mirror_step(s):
     rows = []
     for i in ideas:
         f = tax.fam(i["family"])
+        x = loads(i["xray_json"], None)
         rows.append({"id": i["id"], "text": i["text"], "family": f, "name": tax.name(i["subfamily"] or i["family"]),
                      "common": bool(f and f in common), "favorite": bool(i["is_favorite"]),
-                     "explanation": i["explanation"], "disputed": bool(i["disputed"])})
+                     "explanation": None if x else i["explanation"], "disputed": bool(i["disputed"]),
+                     "xray": lib().t("UI-167", механизм=x.get("driver_user") or x["driver"], барьер=x["barrier"])
+                     if x else None,
+                     "xray_full": [(ai_roles.XRAY_NAMES[k], (x.get("driver_user") if k == "driver" else None) or x[k])
+                                   for k in ai_roles.XRAY_FIELDS if x.get(k)] if x else []})
     options = [(code, tax.name(code)) for code in tax.codes()]
-    return render_template("train/mirror.html", m=mirror, rows=rows, options=options, tax=tax, **c)
+    lens_rows = [{"key": k, "name": ai_roles.LENS_NAMES[k],
+                  "barrier": (mirror.get("lenses") or {}).get(k, {}).get("barrier"),
+                  "question": (mirror.get("lenses") or {}).get(k, {}).get("question")
+                  or lib().t(engine.LENS_FALLBACK[k])} for k in ai_roles.LENSES]
+    return render_template("train/mirror.html", m=mirror, rows=rows, options=options, tax=tax, lens_rows=lens_rows,
+                           **c)
 
 
 # ---------- С4–С5. Диагноз и инструмент (B2 §4, B3) ----------
@@ -607,7 +714,7 @@ def mirror_step(s):
 SELF_DIAG = {"Одна колея": "Д1", "Всё привычное": "Д2", "Держусь за любимую идею": "Д3",
              "Упираюсь в ресурсы": "Д4", "Не знаю": None}
 WHEN_UI = {"assumptions": "UI-140", "chain": "UI-141", "operator": "UI-142", "contradiction": "UI-143",
-           "constraint": "UI-144", "crossing": "UI-072"}
+           "constraint": "UI-144", "crossing": "UI-072", "reframe": "UI-175"}
 SLOT_NOTE = "Слова в [квадратных скобках] замените на то, что относится к вашей задаче."
 
 
@@ -615,8 +722,15 @@ def favorite_idea(sid):
     return next((i for i in ideas_of(sid, "first") if i["is_favorite"]), None)
 
 
-def adapt(td, template, kind):
+def session_barrier(s):
+    """Препятствие, которое человек выбрал на зеркале через линзы (C1 §3), или {}."""
+    return loads(s["flags_json"], {}).get("barrier") or {}
+
+
+def adapt(td, template, kind, barrier=None):
     goal = td.get("goal") or td.get("text", "")
+    if barrier:  # задание адаптируется вокруг выбранного препятствия (текст может быть от человека — как данные)
+        kind += f"; решение ищем вокруг препятствия: <<<{barrier}>>>"
     if ai().available:
         text = ai_roles.adapt_tool(ai(), td.get("text", ""), goal, template, kind)
         if text:
@@ -630,7 +744,7 @@ def _operator_into(tool, s, target, exclude=()):
     rng = engine.rng_for(s["id"], "op", tool["strength"], len(exclude))
     excl = recently_shown(g.user["id"], "LIB-06") | set(exclude)
     op = engine.pick_operator(lib(), None if tax.temp else target, tool["strength"], excl, rng)
-    text, src = adapt(td, op["template"], f"оператор «{op['name']}»")
+    text, src = adapt(td, op["template"], f"оператор «{op['name']}»", session_barrier(s).get("text"))
     mech = tax.mechanism(target).rstrip(". ") if target else ""
     tool.update({"phase": "ready", "target": target, "item_id": op["id"], "source": src,
                  "header": (f"Направление, которого вы не касались: «{tax.name(target)}»"
@@ -744,16 +858,45 @@ def build_tool(s, ttype, strength=None):
             if f and f not in common and f not in seen and not tax.temp:
                 rare.append({"family": f, "text": i["text"]})
                 seen.add(f)
+        principles = False
+        if len(rare) < 2 and not tax.temp:
+            # C1 §6: у человека нет двух редких идей — скрещиваем два незанятых принципа из навигатора
+            for f in mirror.get("untouched", []):
+                if f not in seen and f in lib().families and len(rare) < 2:
+                    rare.append({"family": f, "text": lib().families[f]["name"]})
+                    seen.add(f)
+                    principles = True
         if len(rare) < 2:
             return build_tool(s, "operator", strength)
         tpl, text = engine.pick_crossing(lib(), rare[0], rare[1], recently_shown(uid, "LIB-06X"))
+        if principles:
+            header = " ".join(f"Принцип {n}: «{lib().families[r['family']]['name']}» — "
+                              f"{lib().families[r['family']]['mechanism'].rstrip('. ').lower()}."
+                              for n, r in zip("AB", rare[:2]))
+        else:
+            header = f"Идея A: «{rare[0]['text']}». Идея B: «{rare[1]['text']}»."
         tool.update({"task_text": text, "item_id": tpl["id"], "lib_ids": [tpl["id"]], "source": "library",
-                     "header": f"Идея A: «{rare[0]['text']}». Идея B: «{rare[1]['text']}».",
+                     "header": header, "principles": principles,
                      "after_question": "Что вы взяли из A, что из B и что появилось нового?"})
         mark_shown(uid, "LIB-06X", tpl["id"], s["id"])
+    elif ttype == "reframe":  # C1 §4: цель за целью
+        fav = favorite_idea(s["id"])
+        r = (ai_roles.reframe(ai(), lib(), td.get("text", ""), goal, fav["text"] if fav else None)
+             if ai().available else None)
+        if r:
+            behind = r["goal_behind"]
+            tool.update({"phase": "reframe_confirm", "goal_behind": behind[:1].lower() + behind[1:], "source": "ai"})
+        else:
+            tool.update({"phase": "reframe_why", "source": "template"})
     if tool.get("task_text") and engine.has_open_slots(tool["task_text"]):
         tool["slot_note"] = SLOT_NOTE
     tool["goal"] = goal
+    barrier = session_barrier(s)
+    if barrier.get("text"):
+        tool["barrier"] = barrier["text"]
+        tool["barrier_line"] = lib().t("UI-174", барьер=barrier["text"].rstrip(". "))
+    elif barrier.get("question"):
+        tool["barrier_line"] = barrier["question"]
     return tool
 
 
@@ -866,6 +1009,22 @@ def tool_step(s):
             else:
                 _operator_into(tool, s, target)
                 save(s["id"], tool_json=dumps(tool))
+                return go(s["id"], "tool")
+        elif tool and action == "reframe_yes" and tool["phase"] == "reframe_confirm":
+            tool.update({"phase": "ready", "reframe_confirmed": True,
+                         "task_text": lib().t("UI-178", **{"цель за целью": tool["goal_behind"], "цель": goal})})
+            save(s["id"], tool_json=dumps(tool))
+            log_event("reframe_answered", {"session": s["id"], "confirmed": True})
+            return go(s["id"], "tool")
+        elif tool and action == "reframe_own" and tool["phase"] in ("reframe_confirm", "reframe_why"):
+            behind = (request.form.get("goal_behind") or "").strip().rstrip(".")[:200]
+            if not behind:
+                error = "Напишите одной фразой, ради чего вам нужна эта цель."
+            else:
+                tool.update({"phase": "ready", "goal_behind": behind, "source": "user",
+                             "task_text": lib().t("UI-178", **{"цель за целью": behind, "цель": goal})})
+                save(s["id"], tool_json=dumps(tool))
+                log_event("reframe_answered", {"session": s["id"], "confirmed": False})
                 return go(s["id"], "tool")
         elif tool and action == "change" and not flags.get("tool_changed"):
             new_type = engine.ALTERNATIVES[tool["type"]][0]
@@ -1010,19 +1169,235 @@ def give_hint(s, tool, kind, draft):
     return text
 
 
-def finalize_idea(s, text, extras, self_check):
+def versions_of(sid):
+    """Версии идеи по порядку (эволюция идеи, C1 §2): стадия version и итоговая final."""
+    return get_db().execute("SELECT * FROM ideas WHERE session_id = ? AND stage IN ('version', 'final') "
+                            "ORDER BY version, id", (sid,)).fetchall()
+
+
+def base_for_shift(sid):
+    """С чем сравниваем новую версию: первые идеи человека — его привычный ход мысли."""
+    return [{"text": i["text"], "xray": loads(i["xray_json"], None), "family": i["family"],
+             "subfamily": i["subfamily"], "favorite": bool(i["is_favorite"])}
+            for i in ideas_of(sid, "first")]
+
+
+def _mechanism_of(xray, family_name):
+    """Механизм одной фразой: поправка человека → разбор ИИ → название семейства."""
+    if xray:
+        return xray.get("driver_user") or xray.get("driver")
+    return family_name
+
+
+def compare_version(s, text, cls, prev, precomputed=None):
+    """Детектор ложного сдвига (C1 §3): сменился механизм или только форма — против первых идей и прошлой версии.
+
+    precomputed — (против первых, против прошлой), если ответы модели уже получены параллельно с рентгеном."""
     td = loads(s["task_json"], {})
-    _, cls = store_idea(s["id"], "final", 1, text, td)
+    tax = Taxonomy(td)
+    base = base_for_shift(s["id"])
+    prev_item = [{"text": prev["text"], "xray": loads(prev["xray_json"], None)}] if prev else None
+    vs_first = vs_prev = None
+    if precomputed is not None:
+        vs_first = dict(precomputed[0], source="ai") if precomputed[0] else None
+        vs_prev = dict(precomputed[1], source="ai") if prev_item and precomputed[1] else None
+    elif ai().available:
+        task, goal = td.get("text", ""), td.get("goal", "")
+        jobs = [lambda w: ai_roles.shift_check_v2(w, base, text, task, goal)]
+        if prev_item:
+            jobs.append(lambda w: ai_roles.shift_check_v2(w, prev_item, text, task, goal))
+        results = run_ai_parallel(jobs)
+        vs_first = dict(results[0], source="ai") if results[0] else None
+        vs_prev = dict(results[1], source="ai") if prev_item and results[1] else None
+    if vs_first is None:
+        vs_first = engine.fallback_shift(tax.fam(cls["family"]), [tax.fam(b["family"]) for b in base])
+    if prev_item and vs_prev is None:
+        vs_prev = engine.fallback_shift(tax.fam(cls["family"]), [tax.fam(prev["family"])])
+    return {"vs_first": vs_first, "vs_prev": vs_prev, "prev_id": prev["id"] if prev else None}
+
+
+def create_version(s, text, extras, self_check):
+    """Отправка идеи создаёт версию: рентген + детектор сдвига; человек дорабатывает или оставляет (C1 §2)."""
+    td = loads(s["task_json"], {})
+    versions = versions_of(s["id"])
+    n = len(versions) + 1
+    prev = versions[-1] if versions else None
+    if ai().available:
+        # рентген, детектор сдвига и рубрика не зависят друг от друга — один параллельный заход
+        # (в живом прогоне последовательно версия ждала 17–21 с, а переход к оценке — ещё 12 с)
+        base = base_for_shift(s["id"])
+        prev_item = [{"text": prev["text"], "xray": loads(prev["xray_json"], None)}] if prev else None
+        library, card_line = lib(), card_text(loads(s["card_json"], {}))
+        # детектор сдвига v2: на отложенном эталоне precision 85% → 100% при той же полноте (13_Аудит, §7)
+        task, goal = td.get("text", ""), td.get("goal", "")
+        jobs = xray_jobs(td, [text]) + [lambda w: ai_roles.shift_check_v2(w, base, text, task, goal)]
+        if prev_item:
+            jobs.append(lambda w: ai_roles.shift_check_v2(w, prev_item, text, task, goal))
+        jobs.append(lambda w: ai_roles.rubric(w, library, text, td.get("text", ""), td.get("goal", ""), card_line))
+        results = run_ai_parallel(jobs)
+        cls = finish_xray(td, [text], results[:1])[0]
+        change = compare_version(s, text, cls, prev,
+                                 precomputed=(results[1], results[2] if prev_item else None))
+        change["rubric"] = results[-1]  # оценка этой версии готова заранее
+    else:
+        cls = xray_many(td, [text])[0]
+        change = compare_version(s, text, cls, prev)
+    idea_id, _ = store_idea(s["id"], "version", n, text, td, cls=cls, version=n, change=change)
     db = get_db()
-    for n, extra in enumerate(extras, 1):  # остальные идеи из поля — в банк как «дополнительные»
+    for k, extra in enumerate(extras, 1):  # остальные идеи из поля — в банк как «дополнительные»
         db.execute("INSERT INTO ideas (session_id, stage, ord, text, status, created_at) "
-                   "VALUES (?, 'extra', ?, ?, 'дополнительная', ?)", (s["id"], n, extra, now_iso()))
+                   "VALUES (?, 'extra', ?, ?, 'дополнительная', ?)", (s["id"], k, extra, now_iso()))
     db.commit()
-    flags_update(s, self_check=self_check, multi=None)
+    flags_update(s, self_check=self_check, multi=None, pending_version=idea_id, improve_target=None)
+    shift_kind = (change["vs_first"] or {}).get("shift")
+    log_event("version_created", {"session": s["id"], "n": n, "family": cls["family"], "source": cls["source"],
+                                  "shift": shift_kind, "shift_source": (change["vs_first"] or {}).get("source"),
+                                  "shift_prompt": ai_roles.PROMPT_VERSIONS["shift_check"],
+                                  "shift_confidence": (change["vs_first"] or {}).get("confidence"),
+                                  "hints": len(hints_of(s["id"])), "focus": request.form.get("focus") == "1"})
+    return go(s["id"], "idea")
+
+
+def accept_version(s, idea_id):
+    db = get_db()
+    db.execute("UPDATE ideas SET stage = 'final' WHERE id = ? AND session_id = ?", (idea_id, s["id"]))
+    db.commit()
+    flags_update(s, pending_version=None)
     save(s["id"], state="eval")
-    log_event("idea_submitted", {"session": s["id"], "family": cls["family"], "source": cls["source"],
-                                 "hints": len(hints_of(s["id"])), "extras": len(extras), "self_check": self_check})
+    row = db.execute("SELECT * FROM ideas WHERE id = ?", (idea_id,)).fetchone()
+    log_event("idea_submitted", {"session": s["id"], "family": row["family"], "source": row["class_source"],
+                                 "versions": row["version"], "hints": len(hints_of(s["id"])),
+                                 "self_check": loads(s["flags_json"], {}).get("self_check")})
     return go(s["id"], "eval")
+
+
+# «Хирургия идеи»: поля рентгена, по которым видно, как идея работает (ai_roles.xray)
+XRAY_PARTS = (("actor", "Кто действует"), ("action", "Что делает"), ("driver", "Что побуждает"),
+              ("barrier", "Какой барьер снимается"), ("value", "Что получает"), ("condition", "При каком условии"))
+
+
+def surgery(vf, origin_xray, new_xray):
+    """Что изменилось и что осталось — только из данных.
+
+    dims: измерения детектора — «изменилось» (changed) и «осталось» (kept: модель назвала это прямо; у версий,
+    разобранных до появления kept, строки «осталось» нет). Не названное ни там, ни там — не определено и не
+    показывается. Только если сравнивал ИИ: правила видят одно семейство. parts: было/стало по полям рентгена."""
+    dims = None
+    if vf.get("source") == "ai" and vf.get("shift"):
+        changed, kept = ai_roles.align_mechanism(vf["shift"], list(vf.get("changed") or []), list(vf.get("kept") or []))
+        changed, kept = set(changed), set(kept)
+        dims = [{"name": d, "changed": d in changed, "kept": d in kept} for d in ai_roles.SHIFT_DIMS
+                if d in changed or d in kept] or None
+    parts = None
+    if origin_xray and new_xray:
+        parts = []
+        for key, label in XRAY_PARTS:
+            before = (origin_xray.get("driver_user") if key == "driver" else None) or origin_xray.get(key)
+            after = new_xray.get(key)
+            if before or after:
+                parts.append({"label": label, "before": before or "—", "after": after or "—"})
+    return {"dims": dims, "parts": parts or None}
+
+
+def version_view(row, base, tax=None):
+    """Карточка версии для шаблона: рентген, сдвиг, что изменилось, откуда и куда сместился механизм."""
+    x = loads(row["xray_json"], None)
+    ch = loads(row["change_json"], {}) or {}
+    vf = ch.get("vs_first") or {}
+    kind = vf.get("shift")
+    same = vf.get("same_as")
+    # «Откуда»: первая идея, на которую версия похожа; иначе фаворит; иначе первая по счёту
+    origin = (base[same - 1] if same and same <= len(base)
+              else next((b for b in base if b.get("favorite")), base[0] if base else None))
+    if kind == "механизм":
+        verdict = lib().t("UI-180", объяснение=vf.get("explanation") or "")
+    elif kind in ("форма", "нет"):
+        verdict = lib().t("UI-181", **{"прежняя идея": origin["text"] if origin else "",
+                                       "объяснение": vf.get("explanation") or ""})
+    else:
+        verdict = None
+    vp = ch.get("vs_prev") or {}
+    changed = vp.get("changed") or vf.get("changed") or []
+    name = (lambda code: tax.name(code) if tax and code else None)
+    return {"id": row["id"], "n": row["version"], "text": row["text"], "kind": kind, "verdict": verdict,
+            "explanation": vf.get("explanation"), "dims": list(vf.get("changed") or []),
+            "changed": lib().t("UI-184", список=", ".join(changed)) if changed else None,
+            "mechanism": lib().t("UI-167", механизм=x["driver"], барьер=x["barrier"]) if x else None,
+            "to_mechanism": _mechanism_of(x, name(row["subfamily"] or row["family"])),
+            "to_barrier": (x or {}).get("barrier"), "to_family": name(row["family"]),
+            "from_text": origin["text"] if origin else None,
+            "from_mechanism": _mechanism_of(origin.get("xray"), name(origin.get("subfamily") or origin.get("family")))
+            if origin else None,
+            "from_family": name(origin.get("family")) if origin else None,
+            "stage": row["stage"], "created_at": row["created_at"],
+            "surgery": surgery(vf, origin.get("xray") if origin else None, x)}
+
+
+# ---------- Лестница выхода из тупика (C1 §5) ----------
+
+def ladder_obstacles():
+    return [o.strip() for o in lib().t("UI-186").split("?", 1)[1].split("·")]
+
+
+def ladder_operations():
+    return [o.strip() for o in lib().t("UI-188").split(":", 1)[1].split("·")]
+
+
+def ladder_step(s, tool, action, text):
+    """Одна ступень лестницы; возвращает ответ-перенаправление или None, если ступень не принята."""
+    flags = loads(s["flags_json"], {})
+    ladder = flags.get("ladder") or {}
+    if text:
+        save_draft(s["id"], text)
+    if action == "ladder_start":
+        ladder = {"step": 1}
+    elif action == "ladder_1" and ladder.get("step") == 1:
+        obstacle = request.form.get("obstacle")
+        if obstacle not in ladder_obstacles():
+            return None
+        ladder.update(step=2, obstacle=obstacle)
+    elif action == "ladder_2" and ladder.get("step") == 2:
+        ladder.update(step=3, barrier=(request.form.get("barrier") or "").strip()[:200] or None)
+    elif action == "ladder_3" and ladder.get("step") == 3:
+        operation = request.form.get("operation")
+        if operation not in ladder_operations():
+            return None
+        exclude = recently_shown(g.user["id"], "LIB-06")
+        op = engine.pick_ladder_operator(lib(), operation, exclude,
+                                         engine.rng_for(s["id"], "ladder", operation, len(exclude)))
+        op_text = None
+        if op:
+            raw, _ = adapt(loads(s["task_json"], {}), op["template"], f"оператор «{op['name']}»",
+                           ladder.get("barrier") or session_barrier(s).get("text"))
+            op_text = f"«{op['name']}»: {raw[:1].lower() + raw[1:]}"
+            mark_shown(g.user["id"], "LIB-06", op["id"], s["id"])
+        ladder.update(step=4, operation=operation, op_text=op_text, op_id=op["id"] if op else None)
+    elif action == "ladder_4" and ladder.get("step") == 4:
+        what = (request.form.get("what") or "").strip()[:200]
+        easier = (request.form.get("easier") or "").strip()[:200]
+        if not what or not easier:
+            return None
+        save_draft(s["id"], f"{what[:1].upper() + what[1:]} — {easier[:1].lower() + easier[1:]}")
+        log_event("ladder_step", {"session": s["id"], "step": 4, "result": "fragment"})
+        flags_update(s, ladder=None, ladder_done=True)
+        flash(lib().t("UI-191"))
+        return go(s["id"], "idea")
+    else:
+        return None
+    flags_update(s, ladder=ladder)
+    log_event("ladder_step", {"session": s["id"], "step": ladder["step"], "obstacle": ladder.get("obstacle"),
+                              "operation": ladder.get("operation")})
+    return go(s["id"], "idea")
+
+
+def finish_without_idea(s):
+    """«Закончить без идеи» (UI-193): честно фиксируем, где возникло затруднение, без оценки и пре-мортема."""
+    ladder = loads(s["flags_json"], {}).get("ladder") or {}
+    flags_update(s, no_idea={"step": ladder.get("step"), "obstacle": ladder.get("obstacle")}, ladder=None,
+                 pending_version=None)
+    save(s["id"], state="route")
+    log_event("ladder_failed", {"session": s["id"], "step": ladder.get("step"), "obstacle": ladder.get("obstacle")})
+    return go(s["id"], "route")
 
 
 @step_handler("idea")
@@ -1038,6 +1413,26 @@ def idea_step(s):
         action = request.form.get("action") or ("hint" if request.form.get("hint") else None)
         text = (request.form.get("idea") or "").strip()
         self_check = request.form.get("self_check")
+        pending = flags.get("pending_version")
+        if pending and action not in ("accept_version", "improve"):
+            abort(400)  # сначала решите судьбу текущей версии
+        if action == "accept_version" and pending:
+            return accept_version(s, pending)
+        if action == "improve" and pending:
+            row = get_db().execute("SELECT * FROM ideas WHERE id = ?", (pending,)).fetchone()
+            if not row or row["version"] >= engine.MAX_VERSIONS:
+                abort(400)
+            save_draft(s["id"], row["text"])  # доработка начинается с текста этой версии
+            flags_update(s, pending_version=None)
+            log_event("version_improve", {"session": s["id"], "from": row["version"]})
+            return go(s["id"], "idea")
+        if action and action.startswith("ladder_") and action != "ladder_quit":
+            r = ladder_step(s, tool, action, text)
+            if r is None:
+                abort(400)
+            return r
+        if action == "ladder_quit":
+            return finish_without_idea(s)
         if len(text) > IDEA_MAX:
             error = f"Идея длиннее {IDEA_MAX} символов — сократите до главного."
         elif action == "draft":
@@ -1088,7 +1483,8 @@ def idea_step(s):
             except (ValueError, IndexError):
                 error = "Выберите одну идею."
             else:
-                return finalize_idea(s, chosen, [x for i, x in enumerate(items) if i != idx], flags.get("pending_check"))
+                return create_version(s, chosen, [x for i, x in enumerate(items) if i != idx],
+                                      flags.get("pending_check"))
         elif action == "submit":
             if not text:
                 error = "Напишите идею — пустую отправить нельзя."
@@ -1105,7 +1501,7 @@ def idea_step(s):
                 if len(items) > 1:
                     flags_update(s, multi=items, pending_check=self_check)
                     return go(s["id"], "idea")
-                return finalize_idea(s, items[0], [], self_check)
+                return create_version(s, items[0], [], self_check)
         else:
             abort(400)
         if refusal:
@@ -1119,10 +1515,19 @@ def idea_step(s):
     drafts = get_db().execute("SELECT COUNT(*) FROM ideas WHERE session_id = ? AND stage = 'draft'",
                               (s["id"],)).fetchone()[0]
     c["flags"] = flags
+    base = base_for_shift(s["id"])
+    history = [version_view(v, base, Taxonomy(c["task_data"])) for v in versions_of(s["id"])]
+    pending_view = next((v for v in history if v["id"] == flags.get("pending_version")), None)
+    if pending_view:
+        history = [v for v in history if v["id"] != pending_view["id"]]
+    improve_ui = {"mechanism": "UI-198", "feasibility": "UI-196"}.get(flags.get("improve_target"))
     return render_template("train/idea.html", tool=tool, hints=hints, left=max(0, budget - len(hints)),
                            budget=budget, text=text, error=error, refusal=refusal, confirm_needed=confirm_needed,
                            self_check_needed=needs_self_check(tool), self_check=self_check, drafts=drafts,
-                           multi=flags.get("multi"), hint_names=engine.HINT_NAMES, **c)
+                           multi=flags.get("multi"), hint_names=engine.HINT_NAMES, pending=pending_view,
+                           history=history, max_versions=engine.MAX_VERSIONS, ladder=flags.get("ladder"),
+                           obstacles=ladder_obstacles(), operations=ladder_operations(),
+                           improve_ui=improve_ui, **c)
 
 
 # ---------- С7. Оценка (B4, §2) ----------
@@ -1186,21 +1591,33 @@ def compute_eval(s):
     fav = next((i for i in first if i["is_favorite"]), None)
     final_f = tax.fam(final["family"])
     first_f = [tax.fam(i["family"]) for i in first]
-    shift = engine.shift(final_f, first_f)
+    # Сдвиг — по механизму (детектор ложного сдвига, C1 §3), без ИИ — по семействам
+    vs_first = (loads(final["change_json"], {}) or {}).get("vs_first") or engine.fallback_shift(final_f, first_f) or {}
+    shift_kind = vs_first.get("shift")
+    shift = (shift_kind == "механизм") if shift_kind else None
     hints = hints_of(s["id"])
     author = engine.authorship(final["text"], [h["text"] for h in hints])
     rubric, r_source = None, None
-    if ai().available:
+    cached = (loads(final["change_json"], {}) or {}).get("rubric")
+    if cached:  # посчитана параллельно при создании версии
+        rubric, r_source = cached, "ai"
+    elif ai().available:
         rubric = ai_roles.rubric(ai(), lib(), final["text"], td.get("text", ""), td.get("goal", ""),
                                  card_text(loads(s["card_json"], {})))
         r_source = "ai" if rubric else None
     if not rubric:
         rubric, r_source = rubric_by_rules(s, final), "rules"
     families = {f for f in first_f + [final_f] if f}
+    rare = (final_f not in common) if final_f else None
+    novelty, feasibility = engine.novelty_level(shift_kind, rare), engine.feasibility_level(rubric)
+    type_ui, improve = engine.idea_type(shift_kind, novelty, feasibility)
     return {
         "final_id": final["id"], "family": final_f, "family_name": tax.name(final_f),
         "first_name": tax.name(tax.fam(fav["family"])) if fav and fav["family"] else _rut_name(s),
-        "shift": shift, "rare": (final_f not in common) if final_f else None,
+        "shift": shift, "shift_kind": shift_kind, "shift_explanation": vs_first.get("explanation"),
+        "shift_source": vs_first.get("source"), "novelty": novelty, "feasibility": feasibility,
+        "type_ui": type_ui, "improve": improve, "versions": final["version"] or 1,
+        "rare": rare,
         "common_source": mirror.get("common_source"), "n_basis": mirror.get("n_basis", 0),
         "flexibility": len(families), "hints": len(hints), "authorship": author,
         "own": len(hints) == 0 or (author is not None and author >= AUTHORSHIP_OWN),
@@ -1222,8 +1639,9 @@ def eval_step(s):
     if ev is None or ev.get("final_id") != (final_idea(s["id"]) or {"id": None})["id"]:
         ev = compute_eval(s)
         save(s["id"], eval_json=dumps(ev))
-        log_event("evaluated", {"session": s["id"], "shift": ev["shift"], "rare": ev["rare"],
-                                "flexibility": ev["flexibility"], "hints": ev["hints"],
+        log_event("evaluated", {"session": s["id"], "shift": ev["shift"], "shift_kind": ev["shift_kind"],
+                                "rare": ev["rare"], "novelty": ev["novelty"], "feasibility": ev["feasibility"],
+                                "versions": ev["versions"], "flexibility": ev["flexibility"], "hints": ev["hints"],
                                 "authorship": ev["authorship"], "rubric_source": ev["rubric_source"],
                                 "rubric": {k: v["level"] for k, v in ev["rubric"].items()}})
     flags = c["flags"]
@@ -1240,13 +1658,16 @@ def eval_step(s):
             ev["feedback"] = action
             save(s["id"], eval_json=dumps(ev))
             log_event("difficulty_feedback", {"session": s["id"], "value": action})
-        elif action == "retry" and ev["shift"] is False and not flags.get("retry_used"):
+        elif action == "improve" and can_improve(ev, flags):
+            # «Доработать слабую сторону» (C1 §7): итоговая идея снова становится версией, человек делает следующую
+            final = final_idea(s["id"])
             db = get_db()
-            db.execute("UPDATE ideas SET stage = 'retry' WHERE id = ?", (ev["final_id"],))
+            db.execute("UPDATE ideas SET stage = 'version' WHERE id = ?", (ev["final_id"],))
             db.commit()
-            flags_update(s, retry_used=True)
+            save_draft(s["id"], final["text"])
+            flags_update(s, improve_used=True, improve_target=ev["improve"], pending_version=None)
             save(s["id"], eval_json=None, state="idea")
-            log_event("retry_same_tool", {"session": s["id"]})
+            log_event("improve_weak_side", {"session": s["id"], "target": ev["improve"], "from": ev["versions"]})
             return go(s["id"], "idea")
         elif action == "next":
             if s["mode"] == "practice" and request.form.get("premortem_on"):
@@ -1261,8 +1682,19 @@ def eval_step(s):
             abort(400)
         return go(s["id"], "eval")
     final = final_idea(s["id"])
+    hints = hints_of(s["id"])
+    td = c["task_data"]
+    hint_words = words_from_hints(final["text"], [h["text"] for h in hints],
+                                  [td.get("text"), td.get("goal")] + [i["text"] for i in ideas_of(s["id"], "first")]
+                                  ) if hints else []
     return render_template("train/eval.html", ev=ev, final=final, lines=rubric_lines(ev["rubric"]),
-                           practice=s["mode"] == "practice", **c)
+                           practice=s["mode"] == "practice", can_improve=can_improve(ev, flags),
+                           hint_words=hint_words, **c)
+
+
+def can_improve(ev, flags):
+    """Доработка слабой стороны — один раз за сессию и пока есть место для новой версии."""
+    return bool(ev.get("improve")) and not flags.get("improve_used") and (ev.get("versions") or 1) < engine.MAX_VERSIONS
 
 
 # ---------- С8. Пре-мортем и защита (B4, §3) ----------
@@ -1354,22 +1786,31 @@ def build_objections(s, reasons):
     return source, len(items)
 
 
-def judge_response(s, obj, rtype, text):
-    """Р8 — отдельный вызов без истории; без ИИ — правила (настойчивость не снимает возражение)."""
+def judge_many(s, items):
+    """Р8 — отдельный вызов без истории на каждый ответ; вызовы идут параллельно (в живом прогоне три
+    вердикта подряд занимали до 22 с). Без ИИ — правила: настойчивость не снимает возражение."""
     final = final_idea(s["id"])
-    verdict = None
-    if rtype == "agree":  # человек принимает риск — оценивать нечего, ИИ не нужен
-        return {"verdict": "в силе", "basis": "нет", "reason": "Риск принят.", "source": "rules"}
-    if ai().available:
-        verdict = ai_roles.judge(ai(), final["text"], card_text(loads(s["card_json"], {})),
-                                 f"{obj['condition']} (проверка: {obj['check_text'] or '—'})", rtype, text)
-        if verdict:
-            verdict["source"] = "ai"
-    if not verdict:
-        verdict = dict(engine.fallback_verdict(rtype, text), source="rules")
-    if rtype == "fact" and verdict["verdict"] == "снято":
-        verdict["verdict"] = "ослаблено"  # факт не проверен — максимум «ослаблено» (B4 §3.11)
-    return verdict
+    verdicts = [None] * len(items)
+    asked = [i for i, (_, rtype, _) in enumerate(items) if rtype != "agree"]
+    if asked and ai().available:
+        idea, card_line = final["text"], card_text(loads(s["card_json"], {}))
+        jobs = []
+        for i in asked:
+            obj, rtype, text = items[i]
+            objection = f"{obj['condition']} (проверка: {obj['check_text'] or '—'})"
+            jobs.append(lambda w, o=objection, r=rtype, t=text: ai_roles.judge(w, idea, card_line, o, r, t))
+        for i, v in zip(asked, run_ai_parallel(jobs)):
+            verdicts[i] = dict(v, source="ai") if v else None
+    out = []
+    for (obj, rtype, text), verdict in zip(items, verdicts):
+        if rtype == "agree":  # человек принимает риск — оценивать нечего, ИИ не нужен
+            verdict = {"verdict": "в силе", "basis": "нет", "reason": "Риск принят.", "source": "rules"}
+        elif not verdict:
+            verdict = dict(engine.fallback_verdict(rtype, text), source="rules")
+        if rtype == "fact" and verdict["verdict"] == "снято":
+            verdict["verdict"] = "ослаблено"  # факт не проверен — максимум «ослаблено» (B4 §3.11)
+        out.append(verdict)
+    return out
 
 
 def strongest_of(sid):
@@ -1433,14 +1874,13 @@ def premortem_step(s):
                 errors["round"] = "Ответьте хотя бы на одно возражение — или переходите дальше."
             if not errors:
                 db = get_db()
-                for o in targets:
-                    if o["id"] not in answers:
-                        continue
+                answered = [o for o in targets if o["id"] in answers]
+                verdicts = judge_many(s, [(o, answers[o["id"]][1], answers[o["id"]][2]) for o in answered])
+                for o, v in zip(answered, verdicts):
                     about, rtype, text = answers[o["id"]]
                     if rnd == 2:  # прежний ответ — в журнал событий, в таблице остаётся последний раунд
                         log_event("premortem_round1", {"session": s["id"], "objection": o["id"],
                                                        "type": o["response_type"], "verdict": o["verdict"]})
-                    v = judge_response(s, o, rtype, text)
                     db.execute("UPDATE objections SET about_me = COALESCE(?, about_me), response_type = ?, "
                                "response_text = ?, verdict = ?, basis = ?, reason = ?, verdict_source = ?, round = ? "
                                "WHERE id = ?", (int(about) if about in ("0", "1") else None, rtype, text,
@@ -1498,6 +1938,11 @@ def route_text(s):
     ev = loads(s["eval_json"], {})
     diag = loads(s["diagnosis_json"], {})
     tool = loads(s["tool_json"], {})
+    no_idea = loads(s["flags_json"], {}).get("no_idea")
+    if no_idea:  # попытка без идеи (C1 §5): честно фиксируем, где возникло затруднение
+        return (f"Начали с «{_rut_name(s) or 'ваших первых идей'}» → {DIAG_SHORT.get(diag.get('code'), '—')} → "
+                f"«{tool.get('name', '—')}» → идея не сложилась"
+                + (f"; затруднение: «{no_idea['obstacle'].lower()}»." if no_idea.get("obstacle") else "."))
     strongest = strongest_objection(s)
     text = lib().t("UI-115", **{
         "семейства": ev.get("first_name") or "ваших первых идей",
@@ -1525,17 +1970,36 @@ def route_step(s):
         top = max(set(history), key=history.count)
         before = lib().t("UI-119", что=HELPED[top].lower())
     error = None
+    no_idea = bool(c["flags"].get("no_idea"))
     if request.method == "POST":
         helped = request.form.get("helped")
         correction = (request.form.get("correction") or "").strip()[:300]
+        wow = request.form.get("wow")
         if helped not in HELPED:
             error = "Выберите один вариант."
+        elif not no_idea and wow not in wow_options():
+            error = "Ответьте, пришла бы эта идея вам в голову без тренировки."
         else:
-            save(s["id"], route_json=dumps({"text": text, "correction": correction or None, "helped": helped}),
-                 state="check")
-            log_event("route_done", {"session": s["id"], "helped": helped, "corrected": bool(correction)})
+            save(s["id"], route_json=dumps({"text": text, "correction": correction or None, "helped": helped,
+                                            "wow": wow if not no_idea else None}),
+                 state="done" if no_idea else "check")
+            log_event("route_done", {"session": s["id"], "helped": helped, "corrected": bool(correction),
+                                     "wow": wow, "no_idea": no_idea})
+            if no_idea:  # проверять нечего — завершаем без плана
+                complete_session(load_session(s["id"]), plan_saved=False)
+                return go(s["id"], "done")
             return go(s["id"], "check")
-    return render_template("train/route.html", text=text, before=before, helped=HELPED, error=error, **c)
+    base = base_for_shift(s["id"])
+    genealogy = [version_view(v, base, Taxonomy(c["task_data"])) for v in versions_of(s["id"])]
+    fav = favorite_idea(s["id"])
+    return render_template("train/route.html", text=text, before=before, helped=HELPED, error=error,
+                           genealogy=genealogy, start=fav["text"] if fav else None, wow=wow_options(),
+                           no_idea=no_idea, **c)
+
+
+def wow_options():
+    """«Пришла бы вам эта идея в голову без тренировки?» (UI-201) — главный вопрос о моменте открытия."""
+    return [o.strip() for o in lib().t("UI-201").split("?", 1)[1].split("·")]
 
 
 # ---------- С10. Проверка за 48 часов и завершение сессии (B4, §5) ----------
@@ -1655,11 +2119,185 @@ def check_step(s):
                            due_options=list(DUE), **c)
 
 
+ORIGIN_WHO = {"you": "Вы", "service": "Тренажёр", "ai": "ИИ"}
+SOURCE_NOTE = {"ai": "формулировку адаптировал ИИ", "library": "из библиотеки тренажёра",
+               "template": "из библиотеки тренажёра", "user": "по вашим словам"}
+
+
+def words_from_hints(final_text, hint_texts, own_texts):
+    """Слова итоговой идеи, совпавшие со словами подсказок, — ровно та основа, на которой считается доля авторства
+    (A4 §2.7). also_own: слово было и в задаче или в первых идеях — то есть могло прийти не из подсказки."""
+    hint_stems = set().union(*(engine.stems(t) for t in hint_texts)) if hint_texts else set()
+    own = set().union(*(engine.stems(t) for t in own_texts if t)) if own_texts else set()
+    out, seen = [], set()
+    for raw in re.findall(r"[А-Яа-яЁёA-Za-z0-9]+", final_text or ""):
+        w = raw.lower().replace("ё", "е")
+        if len(w) < 4 or w in engine.STOP or w[:5] in seen or w[:5] not in hint_stems:
+            continue
+        seen.add(w[:5])
+        out.append({"word": raw.lower(), "also_own": w[:5] in own})
+    return out
+
+
+def elapsed_label(delta):
+    """Сколько прошло с первых идей: минуты, часы или дни — сессию могли отложить и вернуться."""
+    minutes = int(delta.total_seconds() // 60)
+    if minutes < 60:
+        return f"{minutes} мин"
+    if minutes < 24 * 60:
+        return f"{minutes // 60} ч {minutes % 60} мин" if minutes % 60 else f"{minutes // 60} ч"
+    return f"через {minutes // (24 * 60)} дн."
+
+
+def origin_story(s, td, versions, incubations):
+    """Паспорт происхождения идеи: что сделали вы, что дал тренажёр и где работал ИИ — по времени, из сохранённых
+    данных сессии. Связей «эта подсказка породила эту версию» не строим: данные их не подтверждают."""
+    sid = s["id"]
+    first = ideas_of(sid, "first")
+    hints = hints_of(sid)
+    tool = loads(s["tool_json"], {})
+    flags = loads(s["flags_json"], {})
+    barrier = flags.get("barrier") or {}
+    rows = get_db().execute(
+        "SELECT name, props_json, at FROM events WHERE user_id = ? AND name IN ('diagnosis_made', 'tool_shown', "
+        "'tool_softened', 'tool_changed', 'ladder_step', 'wants_generation') ORDER BY id", (s["user_id"],)).fetchall()
+    events = [(r["name"], loads(r["props_json"], {}), r["at"]) for r in rows]
+    events = [e for e in events if e[1].get("session") == sid]
+    steps = []
+
+    def add(at, who, title, text=None, note=None, node=False, cls="", ai_touch=False):
+        # ai_touch: материал тренажёра, формулировку которого подстроил ИИ, — автор «Тренажёр», засечка отмечена
+        steps.append({"at": at, "who": who, "who_name": ORIGIN_WHO[who], "title": title, "text": text,
+                      "note": note, "node": node, "cls": cls, "ai_touch": ai_touch or who == "ai",
+                      "order": len(steps)})
+
+    if first:
+        add(first[0]["created_at"], "you", f"Первые идеи — {len(first)}", note="до инструмента и подсказок",
+            node=True, cls="is-start")
+    ladder_noted = False
+    for name, p, at in events:
+        if name == "diagnosis_made" and barrier:
+            lens = ai_roles.LENS_NAMES.get(barrier.get("lens"))
+            if barrier.get("source") == "user":
+                add(at, "you", "Препятствие — своими словами", barrier.get("text"))
+            elif barrier.get("source") == "ai":
+                add(at, "ai", "Препятствие", barrier.get("text"),
+                    note=f"линзу «{lens}» выбрали вы, формулировку предложил ИИ" if lens else None)
+            elif barrier.get("question"):
+                add(at, "service", "Вопрос-линза", barrier.get("question"),
+                    note=f"линзу «{lens}» выбрали вы" if lens else None)
+        elif name == "tool_shown":
+            add(at, "service", f"Инструмент «{engine.TOOL_NAMES.get(p.get('type'), tool.get('name', ''))}»",
+                note=SOURCE_NOTE.get(tool.get("source")), ai_touch=tool.get("source") == "ai")
+        elif name == "tool_softened":
+            add(at, "service", "Задание облегчено", note="по вашей просьбе")
+        elif name == "tool_changed":
+            add(at, "service", f"Инструмент сменён на «{engine.TOOL_NAMES.get(p.get('to'), p.get('to'))}»",
+                note="по вашей просьбе")
+        elif name == "ladder_step":
+            if p.get("step") == 1 and not ladder_noted:
+                add(at, "service", "Лестница «я застрял(а)»", note="вы попросили сменить способ мышления")
+                ladder_noted = True
+            elif p.get("step") == 4 and p.get("operation"):
+                add(at, "service", f"Операция «{p['operation']}»", note="выбрали вы, задание к ней подобрал тренажёр")
+            elif p.get("result") == "fragment":
+                add(at, "you", "Начало идеи из лестницы", note="ваши слова по шагам лестницы")
+        elif name == "wants_generation":
+            add(at, "service", "Просьба «просто дай ответ»", note="тренажёр не пишет идею за вас — отказал")
+    for h in hints:
+        add(h["created_at"], "service", f"Подсказка «{engine.HINT_NAMES.get(h['kind'], h['kind'])}»", h["text"],
+            note="из библиотеки, формулировку подстроил под задачу ИИ" if h["source"] == "ai"
+            else "из библиотеки тренажёра", ai_touch=h["source"] == "ai")
+    for v in versions + incubations:
+        title = "После сессии (второе открытие)" if v["stage"] == "incubation" else f"Версия {v['n']}"
+        kind = ("сдвиг механизма" if v["kind"] == "механизм" else "та же ветка" if v["kind"] in ("форма", "нет")
+                else None)
+        add(v["created_at"], "you", title, v["text"], note=kind, node=True,
+            cls=("is-shift" if v["kind"] == "механизм" else "is-same" if kind else "")
+            + (" is-final" if v["stage"] == "final" else ""))
+    start = parse_time(first[0]["created_at"]) if first else None
+    for st in steps:
+        t = parse_time(st["at"])
+        st["elapsed"] = ("старт" if "is-start" in st["cls"] else elapsed_label(t - start)) if start and t and t >= start             else None
+    steps.sort(key=lambda st: (st["at"] or "", st["order"]))
+    final = next((v for v in versions if v["stage"] == "final"), None)
+    words = words_from_hints(final["text"], [h["text"] for h in hints],
+                             [td.get("text"), td.get("goal")] + [i["text"] for i in first]) if final and hints else []
+    n_ai = sum(1 for h in hints if h["source"] == "ai")
+    return {"steps": steps, "hints": len(hints), "hints_ai": n_ai, "tool_ai": tool.get("source") == "ai",
+            "words": words, "final": bool(final),
+            "ai_parsed": any(i["xray_json"] for i in first) or any(v["mechanism"] for v in versions),
+            "ladder": any(n == "ladder_step" for n, _, _ in events),
+            "refusals": sum(1 for n, _, _ in events if n == "wants_generation")}
+
+
+def session_story(s):
+    """Из чего собраны журнал идеи и карточка в банке: первые идеи, версии и сдвиг, возражения, проверка.
+    Только сохранённые данные сессии — ничего не досчитываем и не вызываем ИИ."""
+    sid = s["id"]
+    td = loads(s["task_json"], {})
+    tax = Taxonomy(td)
+    common = set(loads(s["mirror_json"], {}).get("common", []))
+    first = []
+    for i in ideas_of(sid, "first"):
+        f = tax.fam(i["family"])
+        first.append({"text": i["text"], "favorite": bool(i["is_favorite"]), "family": tax.name(i["family"]),
+                      "common": bool(f and f in common), "known": bool(f),
+                      "mechanism": _mechanism_of(loads(i["xray_json"], None), None)})
+    base = base_for_shift(sid)
+    versions = [version_view(v, base, tax) for v in versions_of(sid)]
+    incubations = [version_view(v, base, tax) for v in get_db().execute(
+        "SELECT * FROM ideas WHERE session_id = ? AND stage = 'incubation' ORDER BY id", (sid,)).fetchall()]
+    strongest = strongest_objection(s)
+    flags = loads(s["flags_json"], {})
+    ev = loads(s["eval_json"], {})
+    db = get_db()
+    return {"td": td, "card_line": card_text(loads(s["card_json"], {})), "first": first,
+            "barrier": flags.get("barrier"), "tool": loads(s["tool_json"], {}),
+            "diag_text": diag_phrase(s, loads(s["diagnosis_json"], {}).get("code", "Д—")),
+            "versions": versions, "incubations": incubations,
+            "final_view": next((v for v in versions if v["stage"] == "final"), None),
+            "ev": ev, "lines": rubric_lines(ev.get("rubric") or {}),
+            "objections": [dict(o, line=objection_line(o), verdict_text=verdict_line(o))
+                           for o in objections_of(sid, "critic")],
+            "risk": objection_text(strongest) if strongest else None,
+            "exp": db.execute("SELECT * FROM experiments WHERE session_id = ?", (sid,)).fetchone(),
+            "outcomes": db.execute("SELECT * FROM outcomes WHERE session_id = ? ORDER BY day", (sid,)).fetchall(),
+            "route": loads(s["route_json"], {}), "no_idea": flags.get("no_idea"), "helped": HELPED,
+            "origin": origin_story(s, td, versions, incubations)}
+
+
+@bp.get("/s/<int:sid>/journal")
+@login_required
+def journal(sid):
+    """Лабораторный журнал идеи: компактный итог сессии из реальных данных — сохранить или показать другому."""
+    s = load_session(sid)
+    final = final_idea(sid)
+    if s["state"] != "done" or (not final and not loads(s["flags_json"], {}).get("no_idea")):
+        return redirect(url_for("train.session_home", sid=sid))
+    log_event("journal_opened", {"session": sid})
+    return render_template("train/journal.html", s=s, final=final, **session_story(s))
+
+
+INCUBATION_AFTER = timedelta(days=1)  # «второе открытие» — через день, только по желанию (C1 §6)
+
+
 @step_handler("done")
 def done_step(s):
     c = ctx(s)
+    db = get_db()
+    incubation = db.execute("SELECT * FROM incubations WHERE session_id = ?", (s["id"],)).fetchone()
     if request.method == "POST":
-        abort(405)
-    exp = get_db().execute("SELECT * FROM experiments WHERE session_id = ?", (s["id"],)).fetchone()
+        if request.form.get("action") != "incubate" or s["mode"] != "task":
+            abort(405)
+        if not incubation:
+            db.execute("INSERT INTO incubations (session_id, due, created_at) VALUES (?, ?, ?)",
+                       (s["id"], (now() + INCUBATION_AFTER).isoformat(timespec="seconds"), now_iso()))
+            db.commit()
+            log_event("incubation_requested", {"session": s["id"]})
+            flash("Завтра в кабинете будет один вопрос об этой задаче. Напоминаний не будет.")
+        return go(s["id"], "done")
+    exp = db.execute("SELECT * FROM experiments WHERE session_id = ?", (s["id"],)).fetchone()
     return render_template("train/done.html", final=final_idea(s["id"]), route=loads(s["route_json"], {}),
-                           ev=loads(s["eval_json"], {}), exp=exp, **c)
+                           ev=loads(s["eval_json"], {}), exp=exp, incubation=incubation,
+                           can_incubate=s["mode"] == "task", **c)

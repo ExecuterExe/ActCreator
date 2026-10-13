@@ -24,5 +24,5 @@
     {% for p in points %}<tr><td>{{ p.date.strftime("%d.%m.%Y") if p.date else "—" }}</td><td>{{ p.label }}</td><td>{{ p.ipm }}</td></tr>{% endfor %}
   </table>
 {% endif %}
-<p><a href="{{ url_for('me') }}">В кабинет</a></p>
+<p><a class="back-link" href="{{ url_for('me') }}">В кабинет</a></p>
 {% endblock %}

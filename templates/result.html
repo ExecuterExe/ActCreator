@@ -22,7 +22,7 @@
   <span class="muted">Посчитано по ответам {{ r.n_respondents }} участников.</span>
 {% endif %}</p>
 
-<table>
+<table class="stack">
   <tr><th>Ваша идея</th><th>Подход</th><th></th></tr>
   {% for i in r.ideas %}
     <tr>
@@ -118,13 +118,13 @@
   <label>Что-то ещё? <span class="muted">(необязательно)</span>
     <input type="text" name="comment" maxlength="1000">
   </label>
-  <p><button type="submit">Отправить</button></p>
+  <div class="actions"><button type="submit" class="primary">Отправить</button></div>
 </form>
 {% endif %}
 
 <div class="box">
   <p>{{ ui("UI-001") }}</p>
-  <p><a class="button" href="{{ url_for('train.start', src='test') }}">{{ ui("UI-002") }}</a>
+  <p class="toolbar"><a class="button primary" href="{{ url_for('train.start', src='test') }}">{{ ui("UI-002") }}</a>
      <a href="{{ url_for('train.start', src='test') }}">{{ ui("UI-003") }}</a>
      <a href="{{ url_for('me') }}">{{ ui("UI-004") }}</a></p>
 </div>

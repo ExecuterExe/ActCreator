@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Регистрация — АктКреватор{% endblock %}
 {% block content %}
+<span class="eyebrow">Аккаунт</span>
 <h1>Регистрация</h1>
 <p class="muted">Нужны только логин и пароль. Почта и имя не нужны.</p>
 <form method="post">
@@ -26,7 +27,7 @@
   </label>
   {% if errors.consent %}<p class="error">{{ errors.consent }}</p>{% endif %}
 
-  <p><button type="submit">Зарегистрироваться</button></p>
+  <div class="actions"><button type="submit" class="primary">Зарегистрироваться</button></div>
 </form>
 <p>Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a></p>
 {% endblock %}

@@ -9,7 +9,7 @@ import random
 import re
 
 SEED_RANK = {"редко": 0, "средне": 1, "часто": 2}
-TOOL_TYPES = ["assumptions", "chain", "operator", "constraint", "contradiction", "crossing"]
+TOOL_TYPES = ["assumptions", "chain", "operator", "constraint", "contradiction", "crossing", "reframe"]
 TOOL_NAMES = {
     "assumptions": "Допущения задачи",
     "chain": "Взлом причинной цепочки",
@@ -17,16 +17,18 @@ TOOL_NAMES = {
     "constraint": "Ограничение",
     "contradiction": "Противоречие",
     "crossing": "Скрещивание механизмов",
+    "reframe": "Перевёрнутая задача",  # v0.5, C1 §4: цель за целью
 }
 DIAG_TOOL = {"Д0": "assumptions", "Д1": "operator", "Д2": "assumptions", "Д3": "chain",
              "Д4": "contradiction", "Д5": "crossing", "Д—": "constraint"}
 DIAG_UI = {"Д0": "UI-049", "Д1": "UI-050", "Д2": "UI-052", "Д3": "UI-053",
            "Д4": "UI-054", "Д5": "UI-055", "Д—": "UI-056"}
-ALTERNATIVES = {"assumptions": ["operator", "constraint"], "operator": ["constraint", "assumptions"],
-                "chain": ["assumptions", "operator"], "constraint": ["operator", "assumptions"],
-                "contradiction": ["constraint", "operator"], "crossing": ["operator", "constraint"]}
+ALTERNATIVES = {"assumptions": ["operator", "reframe"], "operator": ["constraint", "assumptions"],
+                "chain": ["assumptions", "reframe"], "constraint": ["operator", "assumptions"],
+                "contradiction": ["constraint", "operator"], "crossing": ["operator", "constraint"],
+                "reframe": ["assumptions", "operator"]}
 WHY_UI = {"assumptions": "UI-062", "chain": "UI-064", "operator": "UI-070", "contradiction": "UI-071",
-          "crossing": "UI-072", "constraint": "UI-065"}
+          "crossing": "UI-072", "constraint": "UI-065", "reframe": "UI-175"}
 CONSTRAINT_WHY = {"family_ban": "UI-066", "sub_ban": "UI-066", "time": "UI-067", "budget": "UI-067",
                   "scale": "UI-067", "antipode": "UI-068", "transfer": "UI-069"}
 
@@ -478,6 +480,75 @@ def split_ideas(text):
     if len(items) >= 2 and len(items) >= len(lines) - 1:
         return [i for i in items if i]
     return [text.strip()]
+
+
+# ---------- Момент открытия (методология v0.5, C1) ----------
+
+LENS_FALLBACK = {"system": "UI-170", "behavior": "UI-171", "value": "UI-172"}
+MAX_VERSIONS = 4  # версий идеи за сессию (эволюция идеи, C1 §2)
+
+# Лестница выхода из тупика (C1 §5), ступень 3: какую часть решения менять → группы операторов LIB-06
+LADDER_OPERATIONS = {"участника": ("Участники",), "порядок шагов": ("Время", "Структура"),
+                     "источник ценности": ("Обмен",), "условие задачи": ("Смысл", "Масштаб", "Среда")}
+
+
+def fallback_shift(final_family, base_families):
+    """Без ИИ детектор сдвига сравнивает только семейства: другое — «механизм», то же — «форма»."""
+    s = shift(final_family, base_families)
+    if s is None:
+        return None
+    return {"shift": "механизм" if s else "форма", "changed": ["механизм"] if s else [], "same_as": None,
+            "explanation": "", "source": "rules"}
+
+
+def novelty_level(shift_kind, rare):
+    """Ось 1: новизна механизма относительно своих первых идей (+ редкость направления)."""
+    if shift_kind == "механизм":
+        return "высокая" if rare else "средняя"
+    if shift_kind in ("форма", "нет"):
+        return "низкая"
+    return None
+
+
+def feasibility_level(rubric):
+    """Ось 2: реализуемость по рубрике (связь с целью, ресурсы, первый шаг)."""
+    levels = [rubric[k]["level"] for k in ("RB1", "RB2", "RB3") if k in (rubric or {})]
+    if not levels:
+        return None
+    if min(levels) == 1:
+        return "низкая"
+    return "высокая" if sum(levels) / len(levels) >= 2.67 else "средняя"
+
+
+def idea_type(shift_kind, novelty, feasibility):
+    """Тип идеи на двух шкалах (C1 §7) → (UI-текст, что доработать или None)."""
+    if shift_kind == "форма":
+        return "UI-198", "mechanism"
+    if novelty in ("высокая", "средняя"):
+        if feasibility == "низкая":
+            return "UI-196", "feasibility"
+        if feasibility in ("высокая", "средняя"):
+            return "UI-195", None
+        return None, None
+    if novelty == "низкая" and feasibility != "низкая":
+        return "UI-197", "mechanism"
+    return None, "mechanism" if novelty == "низкая" else None
+
+
+def pick_ladder_operator(lib, operation, exclude, rng):
+    groups = LADDER_OPERATIONS.get(operation, ())
+    pool = [o for o in lib.operators if o["group"].split()[0] in groups and o["id"] not in exclude] or \
+           [o for o in lib.operators if o["group"].split()[0] in groups]
+    return rng.choice(pool) if pool else None
+
+
+def mechanism_profile(families, top=3):
+    """Профиль привычных механизмов по первым идеям нескольких сессий (C1 §8): самые частые семейства."""
+    counts = {}
+    for f in families:
+        if f:
+            counts[f[:3]] = counts.get(f[:3], 0) + 1
+    return sorted(counts.items(), key=lambda x: -x[1])[:top]
 
 
 # ---------- Показатели (A4, §2) ----------

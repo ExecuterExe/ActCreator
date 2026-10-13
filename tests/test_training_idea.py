@@ -22,6 +22,10 @@ class IdeaStepTest(TrainingCase):
         self.assertIn("Рисовать обложки", self.page(f"/s/{sid}/idea"))
         final = "Попросить авторов издательства рекомендовать меня своим редакторам"
         self.idea(sid, "submit", final)
+        self.assertEqual(self.state(sid), "idea")  # отправка создаёт версию — сначала её разбор
+        self.assertIn("Версия 1", self.page(f"/s/{sid}/idea"))
+        self.assertEqual(self.post(f"/s/{sid}/idea", {"action": "draft", "idea": "x"}).status_code, 400)
+        self.idea(sid, "accept_version")
         self.assertEqual(self.state(sid), "eval")
         rows = self.q("SELECT * FROM ideas WHERE stage = 'final'")
         self.assertEqual(len(rows), 1)
@@ -96,6 +100,7 @@ class IdeaStepTest(TrainingCase):
         r = self.idea(sid, "pick", chosen="7")
         self.assertIn("Выберите одну идею", r.get_data(as_text=True))
         self.idea(sid, "pick", chosen="1")
+        self.idea(sid, "accept_version")
         self.assertEqual(self.state(sid), "eval")
         final = self.q("SELECT text FROM ideas WHERE stage = 'final'")[0]["text"]
         self.assertEqual(final, "Договориться с авторами о рекомендациях")
@@ -112,6 +117,7 @@ class IdeaStepTest(TrainingCase):
         self.assertIn("Отправить как есть", r.get_data(as_text=True))
         self.assertEqual(self.state(sid), "idea")
         self.idea(sid, "submit", "Сделать портфолио", self_check="yes", confirm="1")
+        self.idea(sid, "accept_version")
         self.assertEqual(self.state(sid), "eval")
         self.assertEqual(self.session_json(sid, "flags_json")["self_check"], "yes")
 

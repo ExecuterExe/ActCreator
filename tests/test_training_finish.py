@@ -28,14 +28,14 @@ class RouteAndCheckTest(TrainingCase):
         self.assertIn("Что помогло больше всего?", page)
         r = self.post(f"/s/{sid}/route", {})
         self.assertIn("Выберите один вариант", r.get_data(as_text=True))
-        self.post(f"/s/{sid}/route", {"helped": "mirror", "correction": "помогло увидеть скидки"})
+        self.post(f"/s/{sid}/route", {"helped": "mirror", "wow": "Нет", "correction": "помогло увидеть скидки"})
         self.assertEqual(self.state(sid), "check")
         route = self.session_json(sid, "route_json")
         self.assertEqual((route["helped"], route["correction"]), ("mirror", "помогло увидеть скидки"))
 
     def test_check_plan_and_completion(self):
         sid = self.to_route()
-        self.post(f"/s/{sid}/route", {"helped": "tool"})
+        self.post(f"/s/{sid}/route", {"helped": "tool", "wow": "Скорее нет"})
         page = self.page(f"/s/{sid}/check")
         self.assertIn("Самый дешёвый способ проверить «не сработает, если", page)
         plan = self.session_json(sid, "flags_json")["check_plan"]
@@ -71,7 +71,7 @@ class RouteAndCheckTest(TrainingCase):
         self.post(f"/s/{sid}/eval", {"action": "next"})
         self.post(f"/s/{sid}/premortem", {"action": "skip"})
         self.assertIn("проверку на прочность пропустили", self.page(f"/s/{sid}/route"))
-        self.post(f"/s/{sid}/route", {"helped": "nothing"})
+        self.post(f"/s/{sid}/route", {"helped": "nothing", "wow": "Да"})
         self.assertIn("Самый дешёвый способ проверить", self.page(f"/s/{sid}/check"))
         self.post(f"/s/{sid}/check", {"action": "skip"})
         self.assertEqual(self.state(sid), "done")
@@ -130,7 +130,7 @@ class CompletionEffectsTest(TrainingCase):
         self.post(f"/s/{sid}/mirror", {"action": "continue"})
         self.page(f"/s/{sid}/tool")
         self.post(f"/s/{sid}/tool", {"action": "go"})
-        self.idea(sid, "submit", "Стенд на книжной ярмарке")
+        self.submit_final(sid, "Стенд на книжной ярмарке")
         self.page(f"/s/{sid}/eval")
         self.post(f"/s/{sid}/eval", {"action": "next"})
         self.post(f"/s/{sid}/premortem", {"action": "skip"})
@@ -152,7 +152,7 @@ class CheckWithAITest(TrainingCase):
         sid = self.to_eval()
         self.post(f"/s/{sid}/eval", {"action": "next"})
         self.post(f"/s/{sid}/premortem", {"action": "skip"})
-        self.post(f"/s/{sid}/route", {"helped": "tool"})
+        self.post(f"/s/{sid}/route", {"helped": "tool", "wow": "Скорее нет"})
         page = self.page(f"/s/{sid}/check")
         plan = self.session_json(sid, "flags_json")["check_plan"]
         self.assertEqual(plan["source"], "ai")
@@ -161,6 +161,37 @@ class CheckWithAITest(TrainingCase):
         n = len([c for c in self.ai_client.calls if "проверка за 48 часов" in c[1]])
         self.page(f"/s/{sid}/check")
         self.assertEqual(n, len([c for c in self.ai_client.calls if "проверка за 48 часов" in c[1]]))
+
+
+class JournalTest(TrainingCase):
+    """Лабораторный журнал идеи: только для завершённой сессии и только её владельцу."""
+
+    def setUp(self):
+        super().setUp()
+        self.register()
+        self.fill_card()
+
+    def test_unfinished_session_redirects_to_its_step(self):
+        sid = self.start()
+        self.set_task(sid)
+        r = self.c.get(f"/s/{sid}/journal")
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers["Location"].endswith(f"/s/{sid}"))
+
+    def test_journal_collects_the_session(self):
+        sid = self.run_session(final="Стенд на книжной ярмарке", plan=True)
+        self.assertIn(f"/s/{sid}/journal", self.page(f"/s/{sid}"))
+        journal = self.page(f"/s/{sid}/journal")
+        for text in ("Стенд на книжной ярмарке", "Скидка 10% на первый заказ", "Что меняли",
+                     "Проверку на прочность пропустили.", "Написать 3 редакторам", "Оценки предварительные."):
+            self.assertIn(text, journal)
+        self.assertEqual(self.q("SELECT COUNT(*) AS n FROM events WHERE name = 'journal_opened'")[0]["n"], 1)
+
+    def test_other_user_cannot_open_journal(self):
+        sid = self.run_session()
+        self.c = self.app.test_client()
+        self.register("user2")
+        self.assertEqual(self.c.get(f"/s/{sid}/journal").status_code, 404)
 
 
 if __name__ == "__main__":

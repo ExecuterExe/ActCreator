@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Журнал идеи — АктКреватор{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<article class="journal">
+  <header class="journal__head">
+    <div>
+      <span class="eyebrow">Лабораторный журнал идеи · {{ ru_date(s.completed_at) }}</span>
+      {% set title = final.text if final else "Попытка без идеи" %}
+      <h1 class="{{ 'h1-long' if title|length > 70 else '' }}">{{ title }}</h1>
+    </div>
+    <div class="toolbar no-print">
+      <button type="button" onclick="window.print()" class="primary">Сохранить как PDF</button>
+      <a class="button" href="{{ url_for('train.session_home', sid=s.id) }}">К итогу сессии</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>Задача</h2>
+    <p>{{ td.text }}</p>
+    {% if td.goal %}<p class="muted">Цель: {{ td.goal }}{% if td.bans %} · Нельзя: {{ td.bans }}{% endif %}</p>{% endif %}
+    <p class="muted">Ресурсы: {{ card_line }}</p>
+  </section>
+
+  <div class="journal__grid">
+    <section>
+      <h2>Первоначальный подход</h2>
+      <ol class="evolution">
+        {% for i in first %}
+          <li class="is-start">
+            <span class="v-text">{{ i.text }}</span>{% if i.favorite %} <span class="caption">· фаворит</span>{% endif %}
+            <span class="v-meta">{{ i.family or "не распознано" }}{% if i.known %} · {{ "частое" if i.common else "редкое" }}{% endif %}{% if i.mechanism %} · {{ i.mechanism }}{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="muted">{{ diag_text }}</p>
+    </section>
+    <section>
+      <h2>Что меняли</h2>
+      {% if barrier and (barrier.text or barrier.question) %}<p><span class="caption">Препятствие</span><br>{{ barrier.text or barrier.question }}</p>{% endif %}
+      <p><span class="caption">Инструмент</span><br><b>{{ tool.name }}.</b> {{ tool.task_text }}</p>
+      {% if route.helped %}<p><span class="caption">Помогло больше всего</span><br>{{ helped[route.helped] }}</p>{% endif %}
+      {% if route.wow %}<p><span class="caption">Пришла бы без тренировки?</span><br>{{ route.wow }}</p>{% endif %}
+    </section>
+  </div>
+
+  {% if final_view %}
+    {% with v=final_view %}{% include "train/_shift.html" %}{% endwith %}
+  {% elif no_idea %}
+    <section><h2>Итог</h2><p>Идея не сложилась{% if no_idea.obstacle %} — затруднение: «{{ no_idea.obstacle|lower }}»{% endif %}. Это тоже результат: видно, где мысль останавливается.</p></section>
+  {% endif %}
+
+  {% if origin.steps %}{% include "train/_origin.html" %}{% endif %}
+
+  {% if final %}
+  <div class="journal__grid">
+    <section>
+      <h2>Сильные стороны и слабые места</h2>
+      {% if ev.novelty or ev.feasibility %}<p><b>{{ ui("UI-194", новизна=ev.novelty or "не определена", реализуемость=ev.feasibility or "не определена") }}</b></p>{% endif %}
+      {% if ev.type_ui %}<p>{{ ui(ev.type_ui) }}</p>{% endif %}
+      {% for line in lines %}<p class="muted">{{ line }}</p>{% endfor %}
+      {% if ev.rubric_source == "ai" %}<p class="caption">{{ ui("UI-099") }}</p>{% endif %}
+    </section>
+    <section>
+      <h2>Ограничения</h2>
+      {% for o in objections %}
+        <div class="objection {{ 'is-removed' if o.verdict == 'снято' else ('is-weak' if o.verdict == 'ослаблено' else '') }}">
+          <p>{{ o.line }}</p>
+          {% if o.verdict_text %}<span class="verdict">{{ o.verdict_text }}</span>{% endif %}
+        </div>
+      {% else %}
+        <p class="muted">Проверку на прочность пропустили.</p>
+      {% endfor %}
+    </section>
+  </div>
+
+  <section>
+    <h2>Следующий тест</h2>
+    {% if exp %}
+      <p class="final">{{ exp.plan }}</p>
+      <p class="muted">До {{ ru_date(exp.due) }}. Снято, если: {{ exp.success_signal }}. Подтвердилось, если: {{ exp.fail_signal }}.</p>
+      {% for o in outcomes %}<p class="caption">День {{ o.day }}: {{ o.status }}{% if o.text %} — {{ o.text }}{% endif %}</p>{% endfor %}
+    {% else %}
+      <p class="muted">Без проверки.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <p class="caption">Журнал собран из ваших ответов и разборов сервиса в этой сессии. Оценки предварительные.</p>
+</article>
+{% endblock %}

@@ -1,29 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Банк идей — АктКреватор{% endblock %}
 {% block content %}
+<span class="eyebrow">Все ваши идеи — бесплатно и навсегда</span>
 <h1>Банк идей</h1>
-{% if empty %}<p>{{ ui("UI-157") }}</p>{% endif %}
+{% if empty %}<p class="panel">{{ ui("UI-157") }}</p>{% endif %}
 
 {% for key, name, items in groups %}
   <h2>{{ name }} ({{ items|length }})</h2>
-  <ul>
+  <div class="ideas">
     {% for i in items %}
-      <li><a href="{{ url_for('between.idea_card', idea_id=i.id) }}">{{ i.text }}</a>
+      <a class="idea-card" href="{{ url_for('between.idea_card', idea_id=i.id) }}" style="display:block;text-decoration:none;color:inherit">
+        <span class="idea-card__text" style="display:block">{{ i.text }}</span>
         <span class="muted">— {{ (loads(i.task_json, {}).get("text") or "")[:80] }}{% if i.mode == "practice" %} (учебная задача){% endif %}
-        {% if i.session_id in unanswered %} · есть вопрос без ответа{% endif %}</span></li>
+        {% if i.session_id in unanswered %} · <span class="tag tag--risk">есть вопрос без ответа</span>{% endif %}</span>
+      </a>
     {% endfor %}
-  </ul>
+  </div>
 {% endfor %}
 
 {% if drafts %}
   <h2>Черновики ({{ drafts|length }})</h2>
   <p class="muted">Идеи из тренировок, которые не были завершены.</p>
-  <ul>{% for i in drafts %}<li>{{ i.text }}</li>{% endfor %}</ul>
+  <ul class="hint-list">{% for i in drafts %}<li>{{ i.text }}</li>{% endfor %}</ul>
 {% endif %}
 
 {% if extras %}
   <h2>Дополнительные ({{ extras|length }})</h2>
-  <ul>{% for i in extras %}<li><a href="{{ url_for('between.idea_card', idea_id=i.id) }}">{{ i.text }}</a></li>{% endfor %}</ul>
+  <ul class="hint-list">{% for i in extras %}<li><a href="{{ url_for('between.idea_card', idea_id=i.id) }}">{{ i.text }}</a></li>{% endfor %}</ul>
 {% endif %}
-<p><a href="{{ url_for('me') }}">В кабинет</a></p>
+<p class="back-row"><a class="back-link" href="{{ url_for('me') }}">В кабинет</a></p>
 {% endblock %}

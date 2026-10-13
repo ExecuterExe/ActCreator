@@ -2,15 +2,16 @@
 {% block title %}Задача — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
-<h1>Задача</h1>
+<span class="eyebrow">Задача</span>
+<h1>Какую задачу решаем</h1>
 <p class="muted">{{ ui("UI-016") }}</p>
 {% if previous %}
   <p>{{ ui("UI-021") }}:
     {% for pid, pt in previous %}<a href="?prev={{ pid }}">{{ (pt.text or '')[:60] }}…</a>{% if not loop.last %} · {% endif %}{% endfor %}
   </p>
 {% endif %}
-{% if warning %}<div class="box"><p class="error">{{ warning }}</p><p class="muted">Можно уточнить или продолжить как есть.</p></div>{% endif %}
-<form method="post">
+{% if warning %}<div class="callout callout--risk"><p><b>{{ warning }}</b></p><p class="muted">Можно уточнить или продолжить как есть.</p></div>{% endif %}
+<form method="post" data-busy="Проверяем постановку задачи…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   {% if values.get("prev_session") %}<input type="hidden" name="prev_session" value="{{ values.prev_session }}">{% endif %}
   {% if warning %}<input type="hidden" name="confirm" value="1">{% endif %}
@@ -31,6 +32,6 @@
   </fieldset>
   <label><input type="checkbox" name="example" value="1" {% if values.get("example") %}checked{% endif %}> {{ ui("UI-024") }}</label>
   <p class="muted">Ваши ресурсы: {{ card.get("R01") or "—" }}, {{ card.get("R02") or "—" }}. <a href="{{ url_for('train.card', kind='full', next=request.path) }}">Что-то изменилось?</a></p>
-  <p><button type="submit">Дальше</button></p>
+  <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
 </form>
 {% endblock %}

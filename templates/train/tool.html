@@ -2,54 +2,86 @@
 {% block title %}Инструмент — АктКреватор{% endblock %}
 {% block content %}
 {% include "train/_steps.html" %}
+<span class="eyebrow">Инструмент</span>
 <h1>{{ tool.name }}</h1>
-{% if diag_text and diag.chosen_by != "user" %}<p><b>{{ diag_text }}</b></p>{% endif %}
+{% if diag_text and diag.chosen_by != "user" %}<div class="callout callout--process reveal"><span class="caption">Что происходит</span><p style="font-weight:600">{{ diag_text }}</p></div>{% endif %}
 {% if after %}<p class="muted">{{ after }}</p>{% endif %}
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
 {% if tool.phase == "why" %}
   <form method="post">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="why">
     <label>{{ ui("UI-029") }}<input type="text" name="why" maxlength="200"></label>
-    <p><button type="submit">Дальше</button></p>
+    <div class="actions"><button type="submit" class="primary">Дальше</button></div>
   </form>
 
 {% elif tool.phase == "select" %}
   <p class="muted">{{ tool.why }}</p>
-  <p>Какие из этих утверждений вы молча принимаете за правду в этой задаче?</p>
   <form method="post">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="select">
-    <table>
-      <tr><th>Утверждение</th><th>Это про меня</th><th>Работаем с ним</th></tr>
+    <fieldset>
+      <legend>Какие из этих утверждений вы молча принимаете за правду в этой задаче?</legend>
+      <p class="muted">Отметьте, что про вас, и выберите одно, с которым будем работать.</p>
       {% for a in tool["items"] %}
-        <tr><td>{{ a.text }}</td>
-          <td><input type="checkbox" name="about_me" value="{{ a.id }}"></td>
-          <td><input type="radio" name="chosen" value="{{ a.id }}"></td></tr>
+        <div class="assumption">
+          <p class="assumption__text" id="as-{{ a.id }}">{{ a.text }}</p>
+          <div class="choices-inline">
+            <label><input type="checkbox" name="about_me" value="{{ a.id }}" aria-describedby="as-{{ a.id }}"> Это про меня</label>
+            <label><input type="radio" name="chosen" value="{{ a.id }}" aria-describedby="as-{{ a.id }}"> Работаем с ним</label>
+          </div>
+        </div>
       {% endfor %}
-    </table>
+    </fieldset>
     <label>Ни одно не подходит? Напишите своё: что в этой задаче кажется вам само собой разумеющимся?
       <input type="text" name="own" maxlength="200"></label>
     <p class="muted">{{ ui("UI-063") }}</p>
-    <p><button type="submit">Дальше</button></p>
+    <div class="actions"><button type="submit" class="primary">Дальше</button></div>
+  </form>
+
+{% elif tool.phase == "reframe_confirm" %}
+  <p class="muted">{{ tool.why }}</p>
+  <p><b>{{ ui("UI-177", **{"цель за целью": tool.goal_behind}) }}</b></p>
+  <form method="post" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <button type="submit" name="action" value="reframe_yes">Да, так</button>
+  </form>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="reframe_own">
+    <label>Нет, на самом деле мне важно… <input type="text" name="goal_behind" maxlength="200"></label>
+    <button type="submit">Сохранить</button>
+  </form>
+
+{% elif tool.phase == "reframe_why" %}
+  <p class="muted">{{ tool.why }}</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="reframe_own">
+    <label>{{ ui("UI-176", цель=tool.goal) }} <input type="text" name="goal_behind" maxlength="200"></label>
+    <div class="actions"><button type="submit" class="primary">Дальше</button></div>
   </form>
 
 {% elif tool.phase == "target" %}
-  <p>Выберите направление, в котором будете искать:</p>
   <form method="post">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="target">
-    {% for t in targets %}<label><input type="radio" name="target" value="{{ t.code }}"> <b>{{ t.name }}</b> — {{ t.mechanism }}</label><br>{% endfor %}
-    <p><button type="submit">Дальше</button></p>
+    <fieldset>
+      <legend>Выберите направление, в котором будете искать:</legend>
+      {% for t in targets %}<label><input type="radio" name="target" value="{{ t.code }}"> <b>{{ t.name }}</b> — {{ t.mechanism }}</label>{% endfor %}
+    </fieldset>
+    <div class="actions"><button type="submit" class="primary">Дальше</button></div>
   </form>
 
 {% else %}
   <p class="muted">{{ tool.why }}</p>
-  {% if tool.header %}<p>{{ tool.header }}</p>{% endif %}
-  <div class="box"><p><b>Задание:</b> {{ tool.task_text }}</p>
-    {% if tool.extra %}<p>{{ tool.extra }}</p>{% endif %}
-    {% if tool.slot_note %}<p class="muted">{{ tool.slot_note }}</p>{% endif %}
+  {% if tool.barrier_line %}<p><b>{{ tool.barrier_line }}</b></p>{% endif %}
+  {% if tool.header %}<p class="muted">{{ tool.header }}</p>{% endif %}
+  <div class="panel task-card reveal-2"><span class="caption">Задание</span>
+    <p style="font-size:var(--fs-lead);font-weight:600;margin:6px 0 0"><span class="sr-only">Задание:</span> {{ tool.task_text }}</p>
+    {% if tool.extra %}<p style="margin-top:var(--s2)">{{ tool.extra }}</p>{% endif %}
+    {% if tool.slot_note %}<p class="muted" style="margin-top:var(--s2)">{{ tool.slot_note }}</p>{% endif %}
   </div>
   {% if tool.softened_text %}<p class="muted">Задание облегчено.</p>{% endif %}
 
@@ -64,11 +96,12 @@
     </details>
   {% endif %}
 
-  <form method="post">
+  <form method="post" class="actions" data-busy="Подбираем…">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    <p><button type="submit" name="action" value="go">Придумать свою идею</button></p>
-    {% if not flags.softened %}<p><button type="submit" name="action" value="soften">{{ ui("UI-078") }}</button></p>{% endif %}
-    {% if not flags.tool_changed %}<p><button type="submit" name="action" value="change">{{ ui("UI-057") }}</button></p>{% endif %}
+    <button type="submit" name="action" value="go" class="primary">Придумать свою идею</button>
+    {% if not flags.softened %}<button type="submit" name="action" value="soften" data-busy="Облегчаем задание…">{{ ui("UI-078") }}</button>{% endif %}
+    {% if not flags.tool_changed %}<button type="submit" name="action" value="change" data-busy="Подбираем другой инструмент…">{{ ui("UI-057") }}</button>{% endif %}
+    <span class="busy-note" aria-live="polite"></span>
   </form>
 {% endif %}
 {% endblock %}

@@ -31,7 +31,8 @@ SCENARIOS = [
                  "goal": "3 новых заказа за месяц", "bans": "без платной рекламы", "in_domain": "yes"},
         "first": ["Скидка 10% на первый заказ", "Скидка 20% постоянным", "Промокод для новых"],
         "favorite": 1, "why": "Скидка мотивирует попробовать",
-        "hints": ["question", "fragment"],
+        "hints": ["question", "fragment"], "lens": "behavior", "wow": "Скорее нет",
+        "pre_versions": ["Скидка 30% на первую обложку для нового издательства"],
         "final": "Нарисовать обложку-образец к книге из ближайшего плана издательства и отправить редактору: "
                  "ему проще оценить готовую работу к своей книге, чем листать портфолио",
         "reasons": ["Редактор не откроет письмо от незнакомого человека"],
@@ -48,7 +49,7 @@ SCENARIOS = [
         "first": ["Вести блог с советами по английскому", "Разместить анкету на Профи.ру",
                   "Скидка на первое занятие"],
         "favorite": 1, "why": "Люди увидят, что я разбираюсь, и придут",
-        "hints": ["transfer"],
+        "hints": ["transfer"], "lens": "value", "wow": "Скорее да",
         "final": "Договориться со школьным учителем английского: он рекомендует меня ученикам, которым нужны "
                  "дополнительные занятия, а я раз в месяц бесплатно провожу для его класса разговорный клуб",
         "reasons": ["Учителю это неинтересно", "Родители не доверят незнакомому репетитору"],
@@ -66,11 +67,30 @@ SCENARIOS = [
                  "in_domain": "no"},
         "first": ["Поставить ещё одну кассу", "Продлить перемену", "Раздавать еду заранее"],
         "favorite": 1, "why": "Очередь пойдёт быстрее",
-        "hints": ["question"], "full": False,
+        "hints": ["question"], "lens": "system", "full": False,
+    },
+    {
+        "name": "Г. Кофейня, уровень 3 — человек сам выбирает «Перевёрнутую задачу»",
+        "task": {"text": "Небольшая кофейня в спальном районе работает полгода, утром очередь, а днём почти пусто.",
+                 "goal": "Чтобы днём выручка выросла вдвое за 2 месяца", "bans": "без скидок", "in_domain": "yes"},
+        "first": ["Скидка на кофе днём", "Бизнес-ланч", "Реклама в районном чате"],
+        "favorite": 1, "why": "Днём людям нужен повод зайти", "level": 3, "tool_choice": "reframe",
+        "hints": [], "lens": "behavior", "wow": "Нет",
+        "final": "Сделать днём тихий рабочий зал для фрилансеров района: столы с розетками, кофе по подписке "
+                 "и тишина до 17:00",
+        "reasons": ["Фрилансеры будут сидеть часами с одной чашкой"],
+        "defense": [("1", "change", "Подписка оплачивается заранее за неделю, поэтому выручка не зависит от "
+                                    "того, сколько чашек выпьют"),
+                    ("1", "argument", "Днём зал всё равно пустует, любой гость лучше пустых столов"),
+                    ("0", "agree", "")],
+        "helped": "tool", "full": True,
     },
 ]
 
-ROLE_MARKERS = [("Оцени формулировку", "проверка задачи (Р0)"), ("Построй 8–12 семейств", "временная таксономия"),
+ROLE_MARKERS = [("Разбери идею", "рентген идеи (Р11)"), ("Сравни новую идею", "детектор сдвига (Р12)"),
+                ("через три разные модели", "три линзы (Р13)"),
+                ("цель на уровень выше", "перевёрнутая задача (Р14)"),
+                ("Оцени формулировку", "проверка задачи (Р0)"), ("Построй 8–12 семейств", "временная таксономия"),
                 ("отнести идею", "классификатор (Р1)"), ("Перепиши шаблон", "адаптация задания (Р5)"),
                 ("причинное допущение", "извлечение допущения (Р4)"), ("Дай ОДНУ подсказку", "коуч-подсказка (Р6)"),
                 ("Оцени идею по рубрикам", "рубрика (Р9)"), ("Ты критик", "критик (Р7)"), ("Ты судья", "судья (Р8)")]
@@ -183,6 +203,12 @@ class Runner:
         self.request(name, "Карточка ресурсов", "POST", "/train/card?next=/train",
                      {"R01": "0 ₽", "R02": "2–5 ч", "R10": "посты в соцсетях — без результата", "ai_notice": "1"},
                      screen=False)
+        if sc.get("level"):
+            with self.app.app_context():
+                from db import get_db
+                conn = get_db()
+                conn.execute("UPDATE user_state SET level = ?", (sc["level"],))
+                conn.commit()
         self.request(name, "Старт", "POST", "/train/start", {"mode": "task"}, screen=False)
         sid = self.db("SELECT MAX(id) AS id FROM sessions")[0]["id"]
         p = f"/s/{sid}"
@@ -193,9 +219,26 @@ class Runner:
         data.update({"favorite": str(sc["favorite"]), "why": sc["why"]})
         self.request(name, "С2 Первые идеи: отправка", "POST", f"{p}/first", data, screen=False)
         self.request(name, "С3 Зеркало", "GET", f"{p}/mirror")
-        self.request(name, "С4 Диагноз", "POST", f"{p}/mirror", {"action": "continue"}, screen=False)
+        self.request(name, "С4 Диагноз (линза выбрана)", "POST", f"{p}/mirror",
+                     {"action": "continue", "lens": sc.get("lens", "behavior")}, screen=False)
         self.request(name, "С5 Инструмент", "GET", f"{p}/tool")
-        tool = json.loads(self.db("SELECT tool_json FROM sessions WHERE id = ?", (sid,))[0]["tool_json"])
+        tool_row = self.db("SELECT tool_json FROM sessions WHERE id = ?", (sid,))[0]["tool_json"]
+        if tool_row is None:  # уровень 3: человек сам выбирает инструмент
+            self.request(name, "С5 Выбор инструмента", "POST", f"{p}/tool",
+                         {"action": "choose", "tool": sc.get("tool_choice", "operator"),
+                          "self_diag": "Держусь за любимую идею"})
+            tool_row = self.db("SELECT tool_json FROM sessions WHERE id = ?", (sid,))[0]["tool_json"]
+        tool = json.loads(tool_row)
+        if tool["phase"] == "reframe_confirm":
+            self.request(name, "С5 Перевёрнутая задача: да", "POST", f"{p}/tool", {"action": "reframe_yes"})
+            tool = json.loads(self.db("SELECT tool_json FROM sessions WHERE id = ?", (sid,))[0]["tool_json"])
+        if tool["phase"] == "reframe_why":  # без ответа ИИ человек сам называет цель за целью
+            self.request(name, "С5 Перевёрнутая задача: своя цель", "POST", f"{p}/tool",
+                         {"action": "reframe_own", "goal_behind": "стабильная выручка весь день"})
+            tool = json.loads(self.db("SELECT tool_json FROM sessions WHERE id = ?", (sid,))[0]["tool_json"])
+        if tool["phase"] == "target":
+            self.request(name, "С5 Направление", "POST", f"{p}/tool", {"action": "target", "target": tool["targets"][0]})
+            tool = json.loads(self.db("SELECT tool_json FROM sessions WHERE id = ?", (sid,))[0]["tool_json"])
         if tool["phase"] == "select":
             self.request(name, "С5 Инструмент: выбор допущения", "POST", f"{p}/tool",
                          {"action": "select", "chosen": tool["items"][0]["id"], "about_me": tool["items"][0]["id"]})
@@ -206,11 +249,13 @@ class Runner:
             self.request(name, f"С6 Подсказка: {kind}", "POST", f"{p}/idea", {"hint": kind, "idea": ""})
         if not sc["full"]:
             return sid
-        self.request(name, "С6 Своя идея: отправка", "POST", f"{p}/idea",
+        for k, text in enumerate(sc.get("pre_versions", []), 1):  # ранние версии — затем «доработать»
+            self.request(name, f"С6 Версия {k}: рентген + детектор сдвига", "POST", f"{p}/idea",
+                         {"action": "submit", "idea": text, "self_check": "no"})
+            self.request(name, f"С6 Версия {k}: доработать", "POST", f"{p}/idea", {"action": "improve"}, screen=False)
+        self.request(name, "С6 Итоговая версия: рентген + детектор сдвига", "POST", f"{p}/idea",
                      {"action": "submit", "idea": sc["final"], "self_check": "no"})
-        if self.state(sid) == "idea":
-            self.request(name, "С6 Своя идея: подтверждение", "POST", f"{p}/idea",
-                         {"action": "submit", "idea": sc["final"], "self_check": "no", "confirm": "1"})
+        self.request(name, "С6 Оставить версию → оценка", "POST", f"{p}/idea", {"action": "accept_version"})
         self.request(name, "С7 Оценка: беру в работу", "POST", f"{p}/eval", {"action": "take"}, screen=False)
         self.request(name, "С7 Оценка → дальше", "POST", f"{p}/eval", {"action": "next"}, screen=False)
         reasons = {f"reason{i}": r for i, r in enumerate(sc["reasons"], 1)}
@@ -225,7 +270,8 @@ class Runner:
                 data.update({f"about_{o['id']}": "1", f"type_{o['id']}": "agree"})
             self.request(name, "С8 Пре-мортем: защита → судья", "POST", f"{p}/premortem", data)
         self.request(name, "С8 Пре-мортем → дальше", "POST", f"{p}/premortem", {"action": "finish"})
-        self.request(name, "С9 Маршрут → дальше", "POST", f"{p}/route", {"helped": sc["helped"]})
+        self.request(name, "С9 Маршрут → дальше", "POST", f"{p}/route",
+                     {"helped": sc["helped"], "wow": sc.get("wow", "Скорее нет")})
         plan = json.loads(self.db("SELECT flags_json FROM sessions WHERE id = ?", (sid,))[0]["flags_json"])["check_plan"]
         self.request(name, "С10 Проверка: сохранить план", "POST", f"{p}/check",
                      {"action": "save", "plan": plan["action"], "when": "завтра",
@@ -241,8 +287,8 @@ class Runner:
         out = {k: json.loads(s[k]) if s[k] else None for k in
                ("task_json", "mirror_json", "diagnosis_json", "tool_json", "eval_json", "route_json", "flags_json")}
         out["state"] = s["state"]
-        out["ideas"] = self.db("SELECT stage, ord, text, family, subfamily, class_source, explanation, status "
-                               "FROM ideas WHERE session_id = ? ORDER BY id", (sid,))
+        out["ideas"] = self.db("SELECT stage, ord, version, text, family, subfamily, class_source, explanation, "
+                               "status, xray_json, change_json FROM ideas WHERE session_id = ? ORDER BY id", (sid,))
         out["hints"] = self.db("SELECT kind, lib_id, text, source FROM hints WHERE session_id = ?", (sid,))
         out["objections"] = self.db("SELECT author, category, card_field, mechanism_link, condition, check_text, "
                                     "severity, about_me, response_type, response_text, verdict, basis, reason, "

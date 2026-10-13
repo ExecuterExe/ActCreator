@@ -183,5 +183,35 @@ class AppTest(unittest.TestCase):
         self.assertIn("не записали ни одной идеи", page)
 
 
+class LocalAssetsTest(unittest.TestCase):
+    """Страницы не ходят к сторонним серверам: шрифты и стили — свои (приватность, 152-ФЗ, доступность)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.app = create_app({"TESTING": True, "DATABASE": str(Path(self.tmp.name) / "test.db"),
+                               "SECRET_KEY": "test", "AI_CLIENT": llm.NullClient()})
+        self.client = self.app.test_client()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_pages_reference_only_own_assets(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertNotRegex(page, r'(href|src)="https?://')
+        css = self.client.get("/static/style.css").get_data(as_text=True)
+        self.assertNotIn("http", re.sub(r"/\*.*?\*/", "", css, flags=re.S))
+
+    def test_every_font_in_css_is_served(self):
+        css = self.client.get("/static/style.css").get_data(as_text=True)
+        fonts = re.findall(r'url\("(fonts/[\w.-]+\.woff2)"\)', css)
+        self.assertEqual(len(fonts), 9)
+        for name in fonts:
+            r = self.client.get("/static/" + name)
+            self.assertEqual(r.status_code, 200, name)
+            self.assertEqual(r.data[:4], b"wOF2", name)
+            r.close()
+        self.assertIn("SIL Open Font License", self.client.get("/static/fonts/OFL.txt").get_data(as_text=True))
+
+
 if __name__ == "__main__":
     unittest.main()

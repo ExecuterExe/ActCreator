@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Тренировка — АктКреватор{% endblock %}
 {% block content %}
+<span class="eyebrow">Тренировка · 12–15 минут</span>
 <h1>{{ ui("UI-005") }}</h1>
 
 {% if open_session %}
-  <div class="box">У вас есть незаконченная тренировка. <a href="{{ url_for('train.session_home', sid=open_session['id']) }}">Продолжить</a></div>
+  <div class="callout callout--process">У вас есть незаконченная тренировка. <a href="{{ url_for('train.session_home', sid=open_session['id']) }}">Продолжить</a></div>
 {% endif %}
 
 <p class="muted">{{ ui("UI-012", бюджет=card.get("R01") or "—", время=card.get("R02") or "—") }} <a href="{{ url_for('train.card', kind='full', next=url_for('train.start')) }}">изменить</a></p>
@@ -17,7 +18,11 @@
   <input type="hidden" name="src" value="{{ request.args.get('src', 'self') }}">
   {% if request.args.get('prev') %}<input type="hidden" name="prev" value="{{ request.args.get('prev') }}">
     <p class="muted">Продолжаем прошлую задачу — она подставится на следующем шаге.</p>{% endif %}
-  <p><button type="submit" name="mode" value="task">{{ ui("UI-002") }}</button></p>
-  <p><button type="submit" name="mode" value="practice">{{ ui("UI-003") }}</button></p>
+  <div class="dash mode-choice">
+    <button type="submit" name="mode" value="task" class="primary">
+      <span class="caption">Своя задача</span><span class="mode-choice__text">{{ ui("UI-002") }}</span></button>
+    <button type="submit" name="mode" value="practice">
+      <span class="caption">Учебная задача</span><span class="mode-choice__text">{{ ui("UI-003") }}</span></button>
+  </div>
 </form>
 {% endblock %}
