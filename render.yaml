@@ -4,7 +4,8 @@
 #
 # Библиотеки едут из папки libraries/ (копия 08_Библиотеки; перед коммитом — sync_libraries.py).
 # На бесплатном плане диск временный: пользователи и сессии стираются при перезапуске, деплое
-# и после «сна» сервиса. Для теста это нормально; для пилота — план starter + диск (см. README.md).
+# и после «сна» сервиса. Данные исследования уходят в Google Sheets (README, «Данные исследования»);
+# аккаунты и вопросы через 2–7 дней сохраняет только план starter + диск.
 services:
   - type: web
     name: actkreator
@@ -27,3 +28,17 @@ services:
         generateValue: true
       - key: ACTKREATOR_HTTPS
         value: "1"
+      # логины команды через запятую: им открыта страница /admin (хранилище, выгрузка, копия базы)
+      - key: ACTKREATOR_ADMINS
+        sync: false
+      # данные исследования — в Google Sheets (диск бесплатного плана временный); настройка — README.
+      # Способ А (проще): Apps Script в самой таблице
+      - key: APPS_SCRIPT_URL
+        sync: false
+      - key: APPS_SCRIPT_TOKEN
+        sync: false
+      # Способ Б: сервисный аккаунт Google Cloud (не задавать, если используется способ А)
+      - key: GOOGLE_SHEETS_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false

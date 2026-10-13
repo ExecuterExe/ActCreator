@@ -6,6 +6,7 @@
 """
 
 import re
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
@@ -15,6 +16,7 @@ from flask import session as flask_session
 import ai_roles
 import engine
 import llm
+import research
 from common import (METHODOLOGY_VERSION, access_status, ai, card_text, dumps, get_state, lib, loads,
                     log_event, login_required, mark_shown, now, parse_time, recently_shown, update_state)
 from db import get_db, now_iso
@@ -2282,12 +2284,75 @@ def journal(sid):
 INCUBATION_AFTER = timedelta(days=1)  # «второе открытие» — через день, только по желанию (C1 §6)
 
 
+# Итоговая оценка тренировки. Вопросы 2–3 — дословно B6 §2.6: ответы прямо ложатся на метрику H4 из реестра
+# («ChatGPT не заменит» или «стал(а) бы искать аналог»). Вопрос 4 — намерение; H3 в реестре — фактический возврат.
+EXIT_REPLACE = ("Полностью заменит", "Частично", "Не заменит")
+EXIT_CLOSED = ("Ничего", "Пользовался(лась) бы ChatGPT", "Стал(а) бы искать аналог", "Другое")
+EXIT_NEXT = ("Снова воспользуюсь АктКреватором", "Сначала попробую обычный ИИ",
+             "Буду искать сам(а) или спрашивать других", "Зависит от задачи",
+             "Скорее не воспользуюсь АктКреватором")
+
+
+def exit_survey_of(sid):
+    return get_db().execute("SELECT * FROM exit_surveys WHERE session_id = ?", (sid,)).fetchone()
+
+
+def save_exit_survey(s):
+    """Ответы проверяются по спискам; одна запись на сессию — повторная отправка её обновляет, а не дублирует.
+    Возвращает (значения, ошибка). «Сохранено» показываем только после подтверждённой записи."""
+    f = request.form
+    useful = f.get("useful", type=int)
+    closed = f.get("if_closed") if f.get("if_closed") in EXIT_CLOSED else None
+    values = {"useful": useful if useful in range(1, 6) else None,
+              "chatgpt_replace": f.get("chatgpt_replace") if f.get("chatgpt_replace") in EXIT_REPLACE else None,
+              "if_closed": closed,
+              "if_closed_other": ((f.get("if_closed_other") or "").strip()[:300] or None) if closed == "Другое"
+              else None,
+              "next_time": f.get("next_time") if f.get("next_time") in EXIT_NEXT else None,
+              "barriers": (f.get("barriers") or "").strip()[:1000] or None}
+    if not any(values.values()):
+        return values, "Ответьте хотя бы на один вопрос — или просто пропустите оценку."
+    existed = exit_survey_of(s["id"]) is not None
+    stamp = now_iso()
+    db = get_db()
+    try:
+        db.execute("INSERT INTO exit_surveys (session_id, user_id, useful, chatgpt_replace, if_closed, "
+                   "if_closed_other, next_time, barriers, created_at, updated_at) "
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                   "ON CONFLICT(session_id) DO UPDATE SET useful = excluded.useful, "
+                   "chatgpt_replace = excluded.chatgpt_replace, if_closed = excluded.if_closed, "
+                   "if_closed_other = excluded.if_closed_other, next_time = excluded.next_time, "
+                   "barriers = excluded.barriers, updated_at = excluded.updated_at",
+                   (s["id"], s["user_id"], values["useful"], values["chatgpt_replace"], values["if_closed"],
+                    values["if_closed_other"], values["next_time"], values["barriers"], stamp, stamp))
+        db.commit()
+    except sqlite3.Error:
+        db.rollback()
+        return values, "Не удалось сохранить ответы — попробуйте отправить ещё раз. Мы ничего не записали."
+    log_event("exit_survey_saved", {"session": s["id"], "updated": existed, "useful": values["useful"],
+                                    "chatgpt_replace": values["chatgpt_replace"], "if_closed": values["if_closed"],
+                                    "next_time": values["next_time"], "has_text": bool(values["barriers"])})
+    return values, None
+
+
 @step_handler("done")
 def done_step(s):
     c = ctx(s)
     db = get_db()
     incubation = db.execute("SELECT * FROM incubations WHERE session_id = ?", (s["id"],)).fetchone()
-    if request.method == "POST":
+    survey_values, survey_error = None, None
+    if request.method == "POST" and request.form.get("action") == "exit_survey":
+        survey_values, survey_error = save_exit_survey(s)
+        if not survey_error:
+            # «Сохранено» — только когда запись подтвердило хранилище исследования (на бесплатном Render
+            # база сервера временная, поэтому настоящее хранилище — внешняя таблица)
+            if research.enabled() and not research.send_now([research.session_record(s["id"])]):
+                flash("Спасибо — ответы приняты. В хранилище исследования они пока не записались: "
+                      "отправим повторно автоматически.")
+            else:
+                flash("Спасибо — оценка сохранена.")
+            return redirect(url_for("train.step", sid=s["id"], step="done") + "#exit")
+    elif request.method == "POST":
         if request.form.get("action") != "incubate" or s["mode"] != "task":
             abort(405)
         if not incubation:
@@ -2298,6 +2363,9 @@ def done_step(s):
             flash("Завтра в кабинете будет один вопрос об этой задаче. Напоминаний не будет.")
         return go(s["id"], "done")
     exp = db.execute("SELECT * FROM experiments WHERE session_id = ?", (s["id"],)).fetchone()
+    survey = exit_survey_of(s["id"])
     return render_template("train/done.html", final=final_idea(s["id"]), route=loads(s["route_json"], {}),
                            ev=loads(s["eval_json"], {}), exp=exp, incubation=incubation,
-                           can_incubate=s["mode"] == "task", **c)
+                           can_incubate=s["mode"] == "task", survey=survey,
+                           survey_values=survey_values or (dict(survey) if survey else {}), survey_error=survey_error,
+                           exit_replace=EXIT_REPLACE, exit_closed=EXIT_CLOSED, exit_next=EXIT_NEXT, **c)

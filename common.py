@@ -59,6 +59,11 @@ def log_event(name, props=None, user_id=None):
     db.execute("INSERT INTO events (user_id, name, props_json, at) VALUES (?, ?, ?, ?)",
                (user_id, name, dumps(props or {}), now_iso()))
     db.commit()
+    try:  # данные исследования — во внешнюю таблицу (research.py); сбой здесь не должен ломать шаг участника
+        import research
+        research.on_event(name, props)
+    except Exception:
+        current_app.logger.exception("research: не удалось поставить шаг в очередь")
 
 
 def get_state(user_id):

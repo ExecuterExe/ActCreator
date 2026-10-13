@@ -28,6 +28,7 @@ import common
 import content
 import library
 import llm
+import research
 import scoring
 from db import close_db, get_db, init_db, now_iso
 
@@ -59,6 +60,8 @@ def create_app(test_config=None):
     # Путь задаём явно: иначе при запуске как скрипта Flask кладёт базу
     # в папку, из которой запущен python.
     app = Flask(__name__, instance_path=str(Path(__file__).resolve().parent / "instance"))
+    # До создания базы: страница исследователя сравнивает с этим временем дату создания базы (пережит ли перезапуск)
+    app.config["STARTED_AT"] = datetime.now(timezone.utc)
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
     app.config.update(
         # На хостинге база должна лежать на постоянном диске: путь задаётся ACTKREATOR_DB.
@@ -264,6 +267,7 @@ def create_app(test_config=None):
                     (json.dumps(answers, ensure_ascii=False), next_step(step), attempt["id"]),
                 )
                 db.commit()
+                research.queue_attempt(attempt["id"])  # каждый шаг анкеты — сразу во внешнюю таблицу
                 return redirect_to_step(next_step(step))
         return render_template(
             "survey.html", step=step, block=content.SURVEY[step], values=current, errors=errors
@@ -298,6 +302,7 @@ def create_app(test_config=None):
                 ),
             )
             db.commit()
+            research.queue_attempt(attempt["id"])
             return redirect(url_for("test_pick"))
         remaining = max(0, int(TASK_SECONDS - elapsed))
         return render_template("task.html", remaining=remaining, seconds=TASK_SECONDS)
@@ -336,6 +341,7 @@ def create_app(test_config=None):
             (json.dumps(picked), json.dumps(result, ensure_ascii=False), now_iso(), attempt["id"]),
         )
         db.commit()
+        research.queue_attempt(attempt["id"])
 
     @app.get("/test/result")
     @login_required
@@ -372,14 +378,18 @@ def create_app(test_config=None):
             (json.dumps(feedback, ensure_ascii=False), attempt["id"]),
         )
         db.commit()
+        research.queue_attempt(attempt["id"])
         flash("Спасибо! Ответ сохранён.")
         return redirect(url_for("test_result"))
 
     import between
     import training
 
+    import admin
+
     app.register_blueprint(training.bp)
     app.register_blueprint(between.bp)
+    app.register_blueprint(admin.bp)
     return app
 
 

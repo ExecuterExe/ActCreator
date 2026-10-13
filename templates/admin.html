@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Исследователю — АктКреватор{% endblock %}
+{% block content %}
+<span class="eyebrow">Только для команды</span>
+<h1>Данные исследования</h1>
+
+<section class="panel">
+  <h2>Хранилище</h2>
+  {% if st.risky and rs.enabled %}
+    <p class="callout callout--risk">Диск сервера временный: после «сна» (15 минут без посетителей), перезапуска и деплоя пропадают аккаунты и незаконченные тренировки. Данные исследования при этом уходят в Google Sheets (ниже) — участникам лучше проходить тренировку за один раз.</p>
+  {% elif st.risky %}
+    <p class="error">Сервер на Render, а база лежит не на постоянном диске, и Google Sheets не подключены. Данные пропадут при деплое, перезапуске и после «сна» сервиса. Не ведите людей на тест (README, раздел «Данные исследования»).</p>
+  {% elif st.persistent %}
+    <p class="callout callout--discovery">База на постоянном диске.</p>
+  {% else %}
+    <p class="muted">Локальный запуск (не Render).</p>
+  {% endif %}
+  <dl class="admin-facts">
+    <dt>Файл базы</dt><dd>{{ st.path }} · {{ st.size_kb }} КБ</dd>
+    <dt>Отметка базы (первый запуск этой версии)</dt><dd>{{ st.created.strftime("%d.%m.%Y %H:%M") if st.created else "—" }} UTC</dd>
+    <dt>Сервер запущен</dt><dd>{{ st.started.strftime("%d.%m.%Y %H:%M") }} UTC</dd>
+    <dt>Перезапуск пережит</dt><dd>{% if st.survived_restart %}да — база старше этого запуска сервера{% else %}пока не видно: база создана при этом запуске{% endif %}</dd>
+    <dt>Последняя проверка записи</dt><dd>{{ st.last_check or "не было" }}</dd>
+    <dt>Последнее событие</dt><dd>{{ st.last_event or "—" }}</dd>
+    {% for name, n in st.counts.items() %}<dt>{{ name }}</dt><dd>{{ n }}</dd>{% endfor %}
+  </dl>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <button type="submit" name="action" value="check">Проверить запись</button>
+  </form>
+  <p class="muted">Перед исследованием: проверьте запись, перезапустите сервис в Render (Manual Deploy → Restart) и откройте эту страницу снова — строка «Перезапуск пережит» должна сказать «да», а счётчики — не обнулиться.</p>
+</section>
+
+<section class="panel">
+  <h2>Google Sheets</h2>
+  {% if rs.config_error %}<p class="error">Настройки Google не читаются: {{ rs.config_error }}.</p>{% endif %}
+  {% if not rs.enabled %}
+    <p class="muted">Не подключены: нет переменных APPS_SCRIPT_URL и APPS_SCRIPT_TOKEN (или GOOGLE_SHEETS_ID и GOOGLE_SERVICE_ACCOUNT_JSON). Данные остаются только в базе сервера. Как подключить — README, раздел «Данные исследования».</p>
+  {% else %}
+    <dl class="admin-facts">
+      {% if rs.mode == "apps_script" %}
+        <dt>Подключение</dt><dd>Apps Script — скрипт в самой таблице, без Google Cloud</dd>
+      {% else %}
+        <dt>Подключение</dt><dd>сервисный аккаунт Google Cloud</dd>
+        {% if rs.sheet_id %}<dt>Таблица</dt><dd><a href="https://docs.google.com/spreadsheets/d/{{ rs.sheet_id }}" rel="noopener" target="_blank">открыть</a></dd>{% endif %}
+        {% if rs.email %}<dt>Сервисный аккаунт</dt><dd>{{ rs.email }} — у него должен быть доступ «Редактор» к таблице</dd>{% endif %}
+      {% endif %}
+      <dt>Номер этой базы</dt><dd>{{ rs.db_uid }} — префикс номеров участников и сессий в таблице</dd>
+      <dt>Тексты идей</dt><dd>{{ "отправляются (вкладка «Идеи»)" if rs.texts else "не отправляются (GOOGLE_SHEETS_TEXTS=0)" }}</dd>
+      <dt>Записей в очереди</dt><dd>{{ rs.total }}, ещё не ушло: {{ rs.pending }}</dd>
+      <dt>Последняя отправка</dt><dd>{{ rs.last_sent or "не было" }}</dd>
+      {% if rs.last_error %}<dt>Последняя ошибка</dt><dd class="error">{{ rs.last_error }}</dd>{% endif %}
+    </dl>
+    <form method="post" class="toolbar">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button type="submit" name="action" value="sheet_check">Проверить таблицу</button>
+      <button type="submit" name="action" value="sheet_flush">Отправить очередь сейчас</button>
+    </form>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Выгрузка</h2>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <p>Архив CSV: входной тест, тренировки с итоговой оценкой и сигналом H4, контрольные точки, сводка. Логинов в нём нет — только номера участников.</p>
+    <label><input type="checkbox" name="with_texts" value="1"> Добавить тексты идей и ответы чат-бота (для слепой перекрёстной оценки, B6 §3)</label>
+    <div class="actions">
+      <button type="submit" name="action" value="export" class="primary">Скачать архив CSV</button>
+      <button type="submit" name="action" value="backup">Скачать копию базы</button>
+    </div>
+  </form>
+  <p class="muted">Копия базы — полный файл SQLite, включая логины и хэши паролей. Храните её только у команды.</p>
+</section>
+{% endblock %}

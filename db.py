@@ -1,3 +1,4 @@
+import secrets
 import sqlite3
 from datetime import datetime, timezone
 
@@ -173,6 +174,42 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 -- «Второе открытие» (C1 §6): вернуться к задаче после перерыва — только по желанию человека.
+-- Итоговая оценка тренировки (B6 §2.6; H4 — метрика из реестра): одна запись на сессию, повторная отправка обновляет.
+CREATE TABLE IF NOT EXISTS exit_surveys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL UNIQUE REFERENCES sessions(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    useful INTEGER,
+    chatgpt_replace TEXT,
+    if_closed TEXT,
+    if_closed_other TEXT,
+    next_time TEXT,
+    barriers TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+-- Служебные отметки базы: когда она создана (видно, пережили ли данные перезапуск сервера), последняя проверка записи.
+CREATE TABLE IF NOT EXISTS meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- Очередь отправки данных исследования во внешнее хранилище (research.py → Google Sheets).
+-- record_id — постоянный ключ строки; отправлено, когда sent_hash = row_hash; sheet_range — где строка лежит в таблице.
+CREATE TABLE IF NOT EXISTS research_outbox (
+    record_id TEXT PRIMARY KEY,
+    tab TEXT NOT NULL,
+    row_json TEXT NOT NULL,
+    row_hash TEXT NOT NULL,
+    sent_hash TEXT,
+    sheet_range TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    updated_at TEXT NOT NULL,
+    sent_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS incubations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id INTEGER NOT NULL UNIQUE REFERENCES sessions(id),
@@ -222,6 +259,10 @@ def init_db(path):
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
                 except sqlite3.OperationalError:  # другой процесс сервера успел добавить колонку раньше
                     pass
+        conn.execute("INSERT OR IGNORE INTO meta (key, value) VALUES ('created_at', ?)", (now_iso(),))
+        # уникальный номер этой базы: после стирания временного диска номера участников начнутся с 1 заново,
+        # а во внешней таблице «u1» из разных баз не должны слиться в одного человека
+        conn.execute("INSERT OR IGNORE INTO meta (key, value) VALUES ('db_uid', ?)", (secrets.token_hex(3),))
         conn.commit()
     finally:
         conn.close()

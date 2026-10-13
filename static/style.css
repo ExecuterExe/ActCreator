@@ -452,6 +452,11 @@ label.lens:has(> input) { display: block; padding: var(--s4) calc(var(--s4) + 28
 /* Допущения на шаге инструмента: утверждение и два решения по нему */
 .assumption { margin: var(--s3) 0; padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); }
 .assumption__text { margin: 0 0 var(--s3); font-weight: 600; }
+/* Страница исследователя: факты о хранилище */
+.admin-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px var(--s4); margin: var(--s4) 0; font-size: var(--fs-small); }
+.admin-facts dt { color: var(--text-3); }
+.admin-facts dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .admin-facts { grid-template-columns: 1fr; } .admin-facts dd { margin-bottom: var(--s2); } }
 /* Выбор тренировки: две крупные кнопки-плитки */
 .mode-choice { margin-top: var(--s5); }
 .mode-choice button { min-height: 96px; flex-direction: column; align-items: flex-start; text-align: left; padding: var(--s4) var(--s5); }

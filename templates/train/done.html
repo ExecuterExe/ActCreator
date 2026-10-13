@@ -21,6 +21,46 @@
   <p class="muted">Без проверки.</p>
 {% endif %}
 
+{# Итоговая оценка тренировки (B6 §2.6, H4 из реестра). Около минуты, всё можно пропустить. #}
+{% set v = survey_values %}
+<section class="panel exit-survey" id="exit" aria-labelledby="exit-title">
+  <h2 id="exit-title">Итоговая оценка тренировки</h2>
+  {% if survey and not survey_error %}
+    <p class="muted">Спасибо — ответы сохранены. Они помогают понять, что в тренажёре работает, а что нужно менять.</p>
+  {% else %}
+    <p class="muted">Спасибо, что попробовали тренажёр! Ещё несколько вопросов — около минуты. Здесь нет правильных ответов, любой можно пропустить.</p>
+  {% endif %}
+  {% if survey_error %}<p class="error">{{ survey_error }}</p>{% endif %}
+  <details {% if not survey or survey_error %}open{% endif %}>
+    <summary>{{ "Изменить ответы" if survey and not survey_error else "Ответить" }}</summary>
+    <form method="post" action="{{ url_for('train.step', sid=s.id, step='done') }}#exit">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="exit_survey">
+      <fieldset>
+        <legend>1. Насколько полезной для вас оказалась тренировка в целом?</legend>
+        <div class="choices-inline">{% for n in range(1, 6) %}<label><input type="radio" name="useful" value="{{ n }}" {% if v.useful == n %}checked{% endif %}> {{ n }}</label>{% endfor %}</div>
+        <p class="muted">1 — совсем не полезна, 5 — очень полезна</p>
+      </fieldset>
+      <fieldset>
+        <legend>2. Мог бы обычный ChatGPT заменить вам такую тренировку?</legend>
+        <div class="choices-inline">{% for o in exit_replace %}<label><input type="radio" name="chatgpt_replace" value="{{ o }}" {% if v.chatgpt_replace == o %}checked{% endif %}> {{ o }}</label>{% endfor %}</div>
+      </fieldset>
+      <fieldset>
+        <legend>3. Если бы такой сервис закрылся, что бы вы сделали?</legend>
+        {% for o in exit_closed %}<label><input type="radio" name="if_closed" value="{{ o }}" {% if v.if_closed == o %}checked{% endif %}> {{ o }}</label>{% endfor %}
+        <label>Если «другое» — что именно? <input type="text" name="if_closed_other" maxlength="300" value="{{ v.if_closed_other or '' }}"></label>
+      </fieldset>
+      <fieldset>
+        <legend>4. Если завтра появится похожая задача, что вы, скорее всего, сделаете?</legend>
+        {% for o in exit_next %}<label><input type="radio" name="next_time" value="{{ o }}" {% if v.next_time == o %}checked{% endif %}> {{ o }}</label>{% endfor %}
+      </fieldset>
+      <label>5. Что больше всего мешало во время тренировки или что стоит улучшить в первую очередь?
+        <textarea name="barriers" rows="3" maxlength="1000">{{ v.barriers or "" }}</textarea></label>
+      <div class="actions"><button type="submit" class="primary">Отправить оценку</button></div>
+    </form>
+  </details>
+</section>
+
 <div class="actions">
   {% if final or route.text %}<a class="button primary" href="{{ url_for('train.journal', sid=s.id) }}">Открыть журнал идеи</a>{% endif %}
   <a class="button" href="{{ url_for('between.bank') }}">Банк идей</a>
