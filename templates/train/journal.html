@@ -29,7 +29,7 @@
         {% for i in first %}
           <li class="is-start">
             <span class="v-text">{{ i.text }}</span>{% if i.favorite %} <span class="caption">· фаворит</span>{% endif %}
-            <span class="v-meta">{{ i.family or "не распознано" }}{% if i.known %} · {{ "частое" if i.common else "редкое" }}{% endif %}{% if i.mechanism %} · {{ i.mechanism }}{% endif %}</span>
+            <span class="v-meta">{{ i.family or "не распознано" }}{% if i.known %} · {{ i.freq_word }}{% endif %}{% if i.mechanism %} · {{ i.mechanism }}{% endif %}</span>
           </li>
         {% endfor %}
       </ol>

@@ -16,6 +16,11 @@ from pathlib import Path
 SETTINGS_PATH = Path(__file__).resolve().parent / "settings.env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "deepseek/deepseek-chat"
+# Самый долгий удачный вызов в живых прогонах 11–12.10 — 23 с (из 300+). Было 60 с на попытку, 2 попытки в клиенте и
+# повтор в ask_json: при зависшем провайдере шаг ждал до 4 минут, а gunicorn рвёт запрос через 120 с — человек видел
+# ошибку вместо запасного варианта (docs/llm-quality/AUDIT.md, задержки).
+DEFAULT_TIMEOUT = 35
+RETRY_BUDGET = 25  # секунд: если первая попытка роли уже заняла больше, повтора нет — сразу запасной вариант
 SETTING_KEYS = ("OPENROUTER_API_KEY", "OPENROUTER_MODEL", "PILOT_FULL_ACCESS")
 
 
@@ -43,23 +48,24 @@ def load_settings(path=SETTINGS_PATH):
 class OpenRouterClient:
     available = True
 
-    def __init__(self, api_key, model=DEFAULT_MODEL, timeout=60, opener=None):
+    def __init__(self, api_key, model=DEFAULT_MODEL, timeout=DEFAULT_TIMEOUT, opener=None):
         self.api_key = api_key
         self.model = model or DEFAULT_MODEL
         self.timeout = timeout
         self._open = opener or urllib.request.urlopen
         self.last_usage = {}  # токены последнего ответа (для замеров стоимости)
+        # кто на самом деле ответил: OpenRouter раздаёт одну модель разным провайдерам, а ответы у них
+        # различаются — для воспроизводимости eval-прогонов это нужно знать (docs/llm-quality/EVAL_PLAN.md)
+        self.last_meta = {}
 
     def complete(self, system, user, max_tokens=600, temperature=0.3):
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
+        return self.chat([{"role": "system", "content": system}, {"role": "user", "content": user}],
+                         max_tokens=max_tokens, temperature=temperature)
+
+    def chat(self, messages, max_tokens=600, temperature=0.3):
+        """Диалог целиком: [{role: system|user|assistant, content}]. Нужен руке «обычный чат-бот» эксперимента
+        (lab.py) — роли сервиса ходят через complete()."""
+        payload = {"model": self.model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
         request = urllib.request.Request(
             OPENROUTER_URL,
             data=json.dumps(payload).encode("utf-8"),
@@ -72,10 +78,13 @@ class OpenRouterClient:
         )
         last_error = None
         for attempt in range(2):
+            self.last_meta = {"attempts": attempt + 1}
+            started = time.monotonic()
             try:
                 with self._open(request, timeout=self.timeout) as response:
                     data = json.loads(response.read().decode("utf-8"))
                 self.last_usage = data.get("usage") or {}
+                self.last_meta.update(provider=data.get("provider"), model=data.get("model"))
                 content = data["choices"][0]["message"]["content"]
                 if not content or not content.strip():
                     raise LLMError("пустой ответ модели")
@@ -88,6 +97,8 @@ class OpenRouterClient:
                     time.sleep(2.5)
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
                 last_error = LLMError(f"сеть: {type(exc).__name__}")
+                if time.monotonic() - started > self.timeout / 2:
+                    break  # провайдер завис: вторая такая же попытка удвоит ожидание — лучше запасной вариант
             except (KeyError, IndexError, ValueError) as exc:
                 last_error = LLMError(f"неожиданный формат ответа: {type(exc).__name__}")
                 break
@@ -101,6 +112,9 @@ class NullClient:
     available = False
 
     def complete(self, *args, **kwargs):
+        raise LLMError("ИИ не настроен")
+
+    def chat(self, *args, **kwargs):
         raise LLMError("ИИ не настроен")
 
 
@@ -119,6 +133,12 @@ class FakeClient:
         if isinstance(result, Exception):
             raise result
         return result
+
+    def chat(self, messages, max_tokens=600, temperature=0.3):
+        """Диалог: responder получает системное сообщение и последнюю реплику человека."""
+        system = next((m["content"] for m in messages if m["role"] == "system"), "")
+        user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+        return self.complete(system, user, max_tokens=max_tokens, temperature=temperature)
 
 
 def make_client(settings):
@@ -182,8 +202,10 @@ class AI:
         """validate(data) возвращает очищенные данные или бросает ValueError."""
         if not self.available:
             return None
-        last = None
-        for _ in range(retries + 1):
+        last, start = None, time.monotonic()
+        for attempt in range(retries + 1):
+            if attempt and time.monotonic() - start > RETRY_BUDGET:
+                break  # долгий сбой не повторяем: человек и так ждал, дальше — запасной вариант без ИИ
             try:
                 text = self.client.complete(system, user, max_tokens=max_tokens, temperature=temperature)
                 return validate(extract_json(text))

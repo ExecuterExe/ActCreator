@@ -77,10 +77,23 @@
 {% else %}
   <p class="muted">{{ tool.why }}</p>
   {% if tool.barrier_line %}<p><b>{{ tool.barrier_line }}</b></p>{% endif %}
-  {% if tool.header %}<p class="muted">{{ tool.header }}</p>{% endif %}
+  {% if tool.header and tool.source != "pattern" %}<p class="muted">{{ tool.header }}</p>{% endif %}
+  {% if tool.evidence %}
+    {# смена механизма: на чём видно, что способ один, — идеи человека и причина шага в каждой #}
+    <p style="margin:0">Как это видно по вашим идеям:</p>
+    <ul class="hint-list">{% for e in tool.evidence %}<li>«{{ e.text }}»{% if e.because %} — <span class="muted">{{ e.because }}</span>{% endif %}</li>{% endfor %}</ul>
+    {% if tool.limit %}<p><b>Чем ограничен этот путь:</b> {{ tool.limit }}</p>{% endif %}
+  {% endif %}
+  {% if first_strong %}<p class="callout callout--process">Ваша первая идея уже выглядит выполнимой и прямо ведёт к цели. Упражнение необязательное: можно попробовать другой механизм — или сразу перейти к выбору решения.</p>{% endif %}
   <div class="panel task-card reveal-2"><span class="caption">Задание</span>
     <p style="font-size:var(--fs-lead);font-weight:600;margin:6px 0 0"><span class="sr-only">Задание:</span> {{ tool.task_text }}</p>
+    {% if tool.ban %}<p style="margin-top:var(--s2)"><b>{{ tool.ban }}</b></p>{% endif %}
     {% if tool.extra %}<p style="margin-top:var(--s2)">{{ tool.extra }}</p>{% endif %}
+    {% if tool.switch_principles %}
+      <p class="caption" style="margin-top:var(--s3)">{% if tool.rut_lever %}Другие способы — вопросы для поиска, а не готовые ответы{% else %}Принципы, на которых ваши идеи не стоят, — направления поиска, а не готовые ответы{% endif %}</p>
+      <ul class="hint-list">{% for pr in tool.switch_principles %}<li><b>{{ pr.name[:1]|upper ~ pr.name[1:] }}.</b> <span class="muted">{{ pr.mechanism }}{{ "" if pr.mechanism.endswith("?") else "." }}</span></li>{% endfor %}</ul>
+    {% endif %}
+    {% if tool.constraints %}<p class="muted" style="margin-top:var(--s2)">Ограничения остаются в силе: {{ tool.constraints }}.</p>{% endif %}
     {% if tool.slot_note %}<p class="muted" style="margin-top:var(--s2)">{{ tool.slot_note }}</p>{% endif %}
   </div>
   {% if tool.softened_text %}<p class="muted">Задание облегчено.</p>{% endif %}
@@ -103,5 +116,13 @@
     {% if not flags.tool_changed %}<button type="submit" name="action" value="change" data-busy="Подбираем другой инструмент…">{{ ui("UI-057") }}</button>{% endif %}
     <span class="busy-note" aria-live="polite"></span>
   </form>
+  {% if tool.type == "switch" %}
+    {# вывод о колее можно отвергнуть и здесь; первая идея может быть уже достаточной — упражнение не навязываем #}
+    <form method="post" class="actions">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button type="submit" name="action" value="not_rut" class="link" data-busy="Подбираем задание…">Мои идеи на самом деле работают по-разному</button>
+      {% if can_skip %}<button type="submit" name="action" value="skip_switch" class="{{ 'primary' if first_strong else 'link' }}">Первая идея уже подходит — сразу к выбору</button>{% endif %}
+    </form>
+  {% endif %}
 {% endif %}
 {% endblock %}

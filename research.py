@@ -53,6 +53,8 @@ def client():
         if script_url or script_token:  # основной способ — Apps Script в самой таблице, без Google Cloud
             if script_url.startswith("https://script.google.com/") and script_token:
                 made = sheets.AppsScriptClient(script_url, script_token)
+                if made.url_problem:  # клиент остаётся: строки копятся в очереди и уйдут, когда адрес исправят
+                    error = f"APPS_SCRIPT_URL — {made.url_problem}"
             else:
                 error = "нужны обе переменные: APPS_SCRIPT_URL (https://script.google.com/…/exec) и APPS_SCRIPT_TOKEN"
         elif sheet_id and key.strip():

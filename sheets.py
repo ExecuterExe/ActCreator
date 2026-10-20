@@ -7,7 +7,9 @@
 """
 
 import base64
+import html
 import json
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -78,6 +80,46 @@ def cell(value):
     return str(value)
 
 
+def script_url_problem(url):
+    """Что не так с адресом веб-приложения, или None. Частые ошибки — адрес редактора и тестовый адрес /dev."""
+    if not url.startswith("https://script.google.com/"):
+        return "адрес должен начинаться с https://script.google.com/"
+    path = urllib.parse.urlsplit(url).path.rstrip("/")
+    if path.endswith("/dev"):
+        return ("это тестовый адрес (/dev) — он открывается только вам после входа в Google. "
+                "Нужен URL веб-приложения из «Начать развертывание → Управление развертываниями», он оканчивается на /exec")
+    if not path.endswith("/exec"):
+        return ("это не адрес веб-приложения (похоже на адрес редактора). Нужен URL из "
+                "«Начать развертывание → Управление развертываниями», он оканчивается на /exec")
+    return None
+
+
+def page_text(body, limit=160):
+    """Видимый текст HTML-страницы одной строкой — чтобы показать на /admin, что ответил Google."""
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", body)
+    text = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", body)).split())
+    return text[:limit] + ("…" if len(text) > limit else "")
+
+
+def explain_page(body, final_url=""):
+    """Почему веб-приложение ответило страницей, а не JSON, — по адресу и тексту страницы Google."""
+    low = body.lower()
+    to_login = urllib.parse.urlsplit(final_url or "").netloc == "accounts.google.com"
+    if to_login or ("accounts.google.com" in low and ("signin" in low or "servicelogin" in low)):
+        return ("Google просит войти: веб-приложение открыто не для всех. В таблице: Расширения → Apps Script → "
+                "Начать развертывание → Управление развертываниями → карандаш → «Выполнять от имени»: Я, "
+                "«У кого есть доступ»: Все → Версия: новая → Начать развертывание")
+    if "dopost" in low and ("not found" in low or "не найден" in low):
+        return ("в скрипте нет функции doPost: вставьте apps_script/Code.gs целиком, сохраните "
+                "и выпустите новую версию развертывания (Управление развертываниями → карандаш → Версия: новая)")
+    if "authorization is required" in low or "требуется авторизация" in low:
+        return "скрипту не дали доступ к таблице: создайте развертывание заново и нажмите «Предоставить доступ»"
+    if "unable to open the file" in low or "не удалось открыть файл" in low:
+        return "по этому адресу нет веб-приложения: развертывание удалено или URL скопирован не полностью"
+    text = page_text(body)
+    return f"Apps Script ответил страницей вместо данных: «{text}»" if text else "Apps Script ответил пустой страницей"
+
+
 class AppsScriptClient:
     """Таблица через Apps Script — без Google Cloud: в таблице опубликован скрипт apps_script/Code.gs
     (веб-приложение), сайт шлёт ему строки пачкой с паролем. Скрипт сам находит строку по record_id
@@ -89,23 +131,30 @@ class AppsScriptClient:
 
     def __init__(self, url, token, timeout=60):
         self.url, self.token, self.timeout = url, token, timeout
+        self.url_problem = script_url_problem(url)
 
     def _post(self, payload):
+        if self.url_problem:  # заведомо не тот адрес — не стучимся, сразу говорим, что исправить
+            raise SheetsError(f"APPS_SCRIPT_URL: {self.url_problem}")
         data = json.dumps(dict(payload, token=self.token), ensure_ascii=False).encode("utf-8")
         req = urllib.request.Request(self.url, data=data, method="POST",
                                      headers={"Content-Type": "application/json"})
         try:
             # веб-приложение отвечает переадресацией на googleusercontent — urllib её проходит сам
             with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                body = r.read().decode("utf-8")
+                body, final_url = r.read().decode("utf-8", "replace"), r.geturl()
         except urllib.error.HTTPError as e:
-            raise SheetsError(f"Apps Script ответил {e.code}") from None
+            try:
+                page, final_url = e.read().decode("utf-8", "replace"), e.geturl()
+            except (AttributeError, OSError, ValueError):
+                page, final_url = "", ""
+            raise SheetsError(f"Apps Script ответил {e.code}: {explain_page(page, final_url)}") from None
         except (urllib.error.URLError, TimeoutError) as e:
             raise SheetsError(f"нет связи с Apps Script: {e}") from None
         try:
             answer = json.loads(body)
-        except ValueError:  # чаще всего — доступ к веб-приложению не «Все» и Google вернул страницу входа
-            raise SheetsError("Apps Script вернул не JSON — проверьте, что доступ к веб-приложению «Все»") from None
+        except ValueError:  # Google вернул страницу: вход, ошибка скрипта, удалённое развертывание
+            raise SheetsError(explain_page(body, final_url)) from None
         if not answer.get("ok"):
             raise SheetsError(f"Apps Script: {answer.get('error', 'неизвестная ошибка')}")
         return answer

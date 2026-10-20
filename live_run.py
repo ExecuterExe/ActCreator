@@ -88,6 +88,10 @@ SCENARIOS = [
 ]
 
 ROLE_MARKERS = [("Разбери идею", "рентген идеи (Р11)"), ("Сравни новую идею", "детектор сдвига (Р12)"),
+                ("аналитик механизмов", "детектор сдвига (Р12)"),  # v2, рабочий с 13.10
+                ("ответы обычного чат-бота на ту же задачу", "сверка с чат-ботом (Р15)"),
+                ("Найди общее в первых идеях", "что общего у идей (Р16)"),
+                ("Составь план самой дешёвой проверки", "план проверки (Р5 v2)"),
                 ("через три разные модели", "три линзы (Р13)"),
                 ("цель на уровень выше", "перевёрнутая задача (Р14)"),
                 ("Оцени формулировку", "проверка задачи (Р0)"), ("Построй 8–12 семейств", "временная таксономия"),
@@ -153,13 +157,19 @@ def model_pricing(model):
 
 
 class Runner:
-    def __init__(self, client, db_path):
+    def __init__(self, client, db_path, flow=None):
         self.timing = client
-        self.app = create_app({"TESTING": True, "DATABASE": db_path, "SECRET_KEY": "live-run",
-                               "AI_CLIENT": client, "FULL_ACCESS": True})
+        config = {"TESTING": True, "DATABASE": db_path, "SECRET_KEY": "live-run", "AI_CLIENT": client,
+                  "FULL_ACCESS": True}
+        if flow:  # путь тренировки: short (по умолчанию в сервисе с 18.10) или full
+            config["DEFAULT_FLOW"] = flow
+        self.app = create_app(config)
         self.c = self.app.test_client()
         self.csrf = None
         self.steps, self.screens = [], []
+        self.think = 0  # секунд «человек пишет первые идеи» между задачей и отправкой идей (по умолчанию без паузы)
+        self.read = 0  # секунд «человек читает карточку версии» перед «Оставить версию»
+        self.look = 0  # секунд «человек читает зеркало» перед «Дальше»
 
     def _ai_slice(self, start):
         return self.timing.calls[start:]
@@ -217,8 +227,10 @@ class Runner:
             self.request(name, "С1 Задача: подтверждение", "POST", f"{p}/task", dict(sc["task"], confirm="1"))
         data = {f"idea{i}": t for i, t in enumerate(sc["first"], 1)}
         data.update({"favorite": str(sc["favorite"]), "why": sc["why"]})
+        time.sleep(self.think)
         self.request(name, "С2 Первые идеи: отправка", "POST", f"{p}/first", data, screen=False)
         self.request(name, "С3 Зеркало", "GET", f"{p}/mirror")
+        time.sleep(self.look)
         self.request(name, "С4 Диагноз (линза выбрана)", "POST", f"{p}/mirror",
                      {"action": "continue", "lens": sc.get("lens", "behavior")}, screen=False)
         self.request(name, "С5 Инструмент", "GET", f"{p}/tool")
@@ -255,7 +267,26 @@ class Runner:
             self.request(name, f"С6 Версия {k}: доработать", "POST", f"{p}/idea", {"action": "improve"}, screen=False)
         self.request(name, "С6 Итоговая версия: рентген + детектор сдвига", "POST", f"{p}/idea",
                      {"action": "submit", "idea": sc["final"], "self_check": "no"})
+        time.sleep(self.read)
         self.request(name, "С6 Оставить версию → оценка", "POST", f"{p}/idea", {"action": "accept_version"})
+        if self.state(sid) == "choose":  # короткий путь (по умолчанию с 18.10): выбор вместо оценки и пре-мортема
+            version = self.db("SELECT id FROM ideas WHERE session_id = ? AND stage = 'version' ORDER BY id DESC "
+                              "LIMIT 1", (sid,))[0]["id"]
+            time.sleep(self.read)  # человек читает варианты; план проверки тем временем готовится в фоне
+            self.request(name, "С7 Выбор решения → проверка", "POST", f"{p}/choose",
+                         {"chosen": str(version), "why": sc.get("choose_why", "Укладывается в мои ресурсы"),
+                          "wow": sc.get("wow", "Скорее нет"), "action": "check"})
+        else:
+            self.full_tail(name, sc, sid, p)
+        plan = json.loads(self.db("SELECT flags_json FROM sessions WHERE id = ?", (sid,))[0]["flags_json"])["check_plan"]
+        self.request(name, "С10 Проверка: сохранить план", "POST", f"{p}/check",
+                     {"action": "save", "plan": plan["action"], "when": "завтра",
+                      "hypothesis": plan.get("hypothesis") or "", "audience": plan.get("audience") or "",
+                      "ok": plan.get("ok") or plan["template"]["ok"], "fail": plan.get("fail") or plan["template"]["fail"]})
+        return sid
+
+    def full_tail(self, name, sc, sid, p):
+        """Полный путь: оценка, пре-мортем с критиком и судьёй, маршрут мысли."""
         self.request(name, "С7 Оценка: беру в работу", "POST", f"{p}/eval", {"action": "take"}, screen=False)
         self.request(name, "С7 Оценка → дальше", "POST", f"{p}/eval", {"action": "next"}, screen=False)
         reasons = {f"reason{i}": r for i, r in enumerate(sc["reasons"], 1)}
@@ -272,11 +303,6 @@ class Runner:
         self.request(name, "С8 Пре-мортем → дальше", "POST", f"{p}/premortem", {"action": "finish"})
         self.request(name, "С9 Маршрут → дальше", "POST", f"{p}/route",
                      {"helped": sc["helped"], "wow": sc.get("wow", "Скорее нет")})
-        plan = json.loads(self.db("SELECT flags_json FROM sessions WHERE id = ?", (sid,))[0]["flags_json"])["check_plan"]
-        self.request(name, "С10 Проверка: сохранить план", "POST", f"{p}/check",
-                     {"action": "save", "plan": plan["action"], "when": "завтра",
-                      "ok": plan["template"]["ok"], "fail": plan["template"]["fail"]})
-        return sid
 
     def _fresh_csrf(self, path):
         m = CSRF_RE.search(self.c.get(path, follow_redirects=True).get_data(as_text=True))
@@ -312,7 +338,16 @@ def main():
     out_dir.mkdir(exist_ok=True)
     result = {"model": model, "started": datetime.now().isoformat(timespec="seconds"), "scenarios": []}
     with tempfile.TemporaryDirectory() as tmp:
-        runner = Runner(timing, str(Path(tmp) / "live.db"))
+        runner = Runner(timing, str(Path(tmp) / "live.db"),
+                        flow=sys.argv[sys.argv.index("--flow") + 1] if "--flow" in sys.argv else None)
+        if "--think" in sys.argv:  # пауза «человек пишет первые идеи», секунд: live_run.py --think 60
+            runner.think = float(sys.argv[sys.argv.index("--think") + 1])
+        if "--read" in sys.argv:  # пауза «человек читает карточку версии»: live_run.py --read 20
+            runner.read = float(sys.argv[sys.argv.index("--read") + 1])
+        if "--look" in sys.argv:  # пауза «человек читает зеркало»: live_run.py --look 15
+            runner.look = float(sys.argv[sys.argv.index("--look") + 1])
+        result["think_seconds"], result["read_seconds"], result["look_seconds"] = runner.think, runner.read, runner.look
+        result["flow"] = runner.app.config.get("DEFAULT_FLOW") or "short (по умолчанию)"
         for i, sc in enumerate(SCENARIOS, 1):
             t0, start_calls = time.perf_counter(), len(timing.calls)
             print(f"Сценарий {sc['name']} ...", flush=True)

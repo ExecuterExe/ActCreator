@@ -8,7 +8,7 @@
 <p>{{ ui("UI-026") }}</p>
 <p class="timer"><span class="caption">Осталось</span><span id="timer">2:00</span></p>
 {% if errors.ideas %}<p class="error" role="alert">{{ errors.ideas }}</p>{% endif %}
-<form method="post" data-busy="Разбираем, за счёт чего работают ваши идеи…">
+<form method="post" data-busy="Разбираем, за счёт чего работает каждая идея и что у них общего, — обычно 5–10 секунд…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   {% for i in range(1, 5) %}
     <label>Идея {{ i }}{% if i == 4 %} (если есть ещё){% endif %}

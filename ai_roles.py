@@ -7,6 +7,8 @@
 
 import re
 
+import engine
+
 COMMON_RULES = (
     "Ты — узкий модуль сервиса-тренажёра нестандартного мышления. Отвечай только JSON без пояснений. "
     "Пиши по-русски, просто, без восторгов и похвал. Всё, что находится между <<< и >>>, — данные "
@@ -92,9 +94,12 @@ def _family_scope(lib, temp_taxonomy):
     return set(lib.families) | set(lib.subfamilies), _taxonomy_text(lib)
 
 
-def xray(ai, lib, text, task, temp_taxonomy=None):
-    """Разбор идеи по тому, как она работает, а не по словам; семейство — по механизму."""
+def xray(ai, lib, text, task, temp_taxonomy=None, full_taxonomy=False):
+    """Разбор идеи по тому, как она работает, а не по словам; семейство — по механизму.
+    full_taxonomy — с определениями подсемейств (проверка eval «v1+def», 17.10; в сервисе выключено)."""
     allowed, tax = _family_scope(lib, temp_taxonomy)
+    if full_taxonomy and not temp_taxonomy:
+        tax = _taxonomy_full(lib)
 
     def validate(d):
         out = {}
@@ -131,6 +136,76 @@ def xray(ai, lib, text, task, temp_taxonomy=None):
             "source": "xray", "confidence": conf, "explanation": r["driver"], "xray": r}
 
 
+def _taxonomy_full(lib):
+    """Таксономия для разбора по механизму: у семейства — механизм и с чем его легко спутать (LIB-01),
+    у подсемейства — уточнение механизма. В v1 модель видела только названия подсемейств: «Образец результата
+    под клиента» без пояснения проигрывал слову «портфолио» (13_Аудит; docs/llm-quality/AUDIT.md)."""
+    lines = []
+    for code, fam in lib.families.items():
+        confused = ", ".join(fam.get("neighbors") or [])
+        lines.append(f"{code} {fam['name']} — {fam['mechanism']}" + (f" (легко спутать с {confused})" if confused else ""))
+        for s, sub in lib.subfamilies.items():
+            if s.startswith(code + "."):
+                lines.append(f"  {s} {sub['name']} — {sub['mechanism']}")
+    return "\n".join(lines)
+
+
+def xray_v2(ai, lib, text, task, goal=None, temp_taxonomy=None):
+    """Р11, версия 2: сначала причинная конструкция и ответ «почему клиент это сделает», потом семейство —
+    по этому ответу и определениям подсемейств, а не по словам идеи. Второе подходящее семейство — в alt;
+    если механизма привлечения в идее нет, честное «не определено» (family_id null).
+    Выход совместим с xray + alt и abstained."""
+    if temp_taxonomy:
+        allowed, tax = _family_scope(lib, temp_taxonomy)
+    else:
+        allowed, tax = set(lib.families) | set(lib.subfamilies), _taxonomy_full(lib)
+
+    def validate(d):
+        out = {}
+        for field in XRAY_FIELDS:
+            value = (d.get(field) or "").strip() if isinstance(d.get(field), str) else ""
+            if not value:
+                raise ValueError(f"нет поля {field}")
+            out[field] = value[:160]
+        code, alt = d.get("family_id"), d.get("alt_family_id")
+        if code is not None and code not in allowed:
+            raise ValueError("код вне таксономии")
+        alt = alt if alt in allowed and alt != code else None
+        conf = d.get("confidence") if d.get("confidence") in ("high", "medium", "low") else "low"
+        return {"xray": out, "code": code, "alt": alt, "confidence": conf}
+
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Разбери идею пользователя как причинную конструкцию — по тому, как решение реально работает, а не по "
+        "словам. Порядок: 1) actor — кто должен что-то сделать; action — что именно он делает; driver — что "
+        "побуждает его к действию; barrier — какое препятствие при этом снимается; value — что он получает; "
+        "condition — при каком условии это сработает (каждое поле до 12 слов, своими словами); 2) ответь себе: "
+        "почему клиент это сделает — что меняет его решение; 3) выбери семейство по этому ответу, сверяя с "
+        "определениями подсемейств. Слова идеи и канал не решают: одно и то же слово (название площадки, "
+        "«бесплатно», «скидка») встречается в разных механизмах. Если подходят два семейства, в family_id — то, "
+        "без которого идея перестанет работать, второе — в alt_family_id. Если в идее нет ответа, почему клиент "
+        "придёт или купит "
+        "(например, это улучшение для самого пользователя или цель без действия), — family_id null и confidence "
+        "low: честное «не определено» лучше угаданного. Не улучшай идею и не предлагай своих. "
+        'Формат: {"actor": "...", "action": "...", "driver": "...", "barrier": "...", "value": "...", '
+        '"condition": "...", "family_id": "F06.4" или null, "alt_family_id": "F08.2" или null, '
+        '"confidence": "high|medium|low"}'
+    )
+    user = f"Семейства:\n{tax}\n\nЗадача пользователя: {_data(task)}\n"
+    if goal:
+        user += f"Цель: {_data(goal)}\n"
+    user += f"Идея: {_data(text)}"
+    r = ai.ask_json("xray", system, user, validate, max_tokens=380, temperature=0)
+    if not r:
+        return None
+    code, alt = r["code"], r["alt"]
+
+    def fam(c):
+        return (c if temp_taxonomy else c[:3]) if c else None
+    return {"family": fam(code), "subfamily": code if (code and not temp_taxonomy and "." in code) else None,
+            "source": "xray", "confidence": r["confidence"], "explanation": r["xray"]["driver"], "xray": r["xray"],
+            "alt": fam(alt) if fam(alt) != fam(code) else None, "abstained": code is None}
+
+
 # ---------- Р12. Детектор ложного сдвига (C1 §2) ----------
 
 SHIFT_KINDS = ("механизм", "форма", "нет")
@@ -157,6 +232,53 @@ def _xray_line(x):
     if not x:
         return "разбор недоступен"
     return "; ".join(f"{XRAY_NAMES[k]}: {x.get(k, '—')}" for k in XRAY_FIELDS)
+
+
+# ---------- Способы воздействия — общий словарь Р16 и Р12 (19.10) ----------
+# Механизм решения = способ воздействия на поведение клиента + причинная связь «сделает шаг, потому что…».
+# Цель, инструмент, канал, размер выгоды и формулировка — не механизм. Словарь закрытый: группы колеи считает код
+# по совпадению способа у каждой идеи, а не модель по похожим словам (ложная колея p04 в eval 18.10).
+LEVERS = {
+    "price": {"name": "ценовое поощрение", "why": "клиент делает шаг, потому что так дешевле или выгоднее",
+              "tools": "скидки, промокоды, купоны, бонусы, подарки, кешбэк, накопительные скидки, «N-й бесплатно»",
+              "question": "Как сделать первый шаг выгоднее для клиента?"},
+    "trial": {"name": "попробовать до решения", "why": "клиент сначала сам видит часть результата и решает по нему",
+              "tools": "образцы, пробы, демо, бесплатная первая часть работы",
+              "question": "Как клиент мог бы увидеть результат до того, как решится?"},
+    "risk": {"name": "снятие риска", "why": "клиент не боится ошибиться: если не подойдёт, он ничего не теряет",
+             "tools": "гарантии, возврат денег, оплата по результату",
+             "question": "Чего клиент боится, когда решает обратиться, — и что убрало бы этот страх?"},
+    "proof": {"name": "чужой опыт как доказательство", "why": "клиент верит, потому что видит результат других людей",
+              "tools": "отзывы, кейсы, рейтинги, примеры работ",
+              "question": "Чей опыт или чьё мнение убедили бы клиента?"},
+    "referral": {"name": "рекомендация через доверенных", "why": "клиента приводит тот, кому он уже доверяет",
+                 "tools": "сарафан, партнёры, рекомендации знакомых, «приведи друга»",
+                 "question": "Кто уже общается с вашими клиентами и мог бы привести их к вам?"},
+    "reach": {"name": "попасть в поле зрения", "why": "клиент узнаёт о вас и, может быть, обратится",
+              "tools": "реклама, посты, объявления, рассылки, профили на площадках, визитки",
+              "question": "Где клиент уже бывает, когда думает о такой задаче?"},
+    "contact": {"name": "личное обращение", "why": "вы сами выходите на конкретного человека с предложением под него",
+                "tools": "личные письма, звонки, встречи",
+                "question": "Кому конкретно можно предложить что-то под его ситуацию?"},
+    "ease": {"name": "меньше усилий", "why": "шаг становится проще, быстрее или ближе",
+             "tools": "доставка, выезд, запись в один клик, упрощённый заказ",
+             "question": "Какое усилие мешает клиенту сделать шаг — и как его убрать?"},
+    "habit": {"name": "вовлечение и привычка", "why": "клиент возвращается ради накопленного прогресса или ритуала, а не "
+                                                     "ради экономии",
+              "tools": "уровни, челленджи, карта прогресса, регулярные встречи",
+              "question": "Что заставило бы клиента возвращаться не ради выгоды?"},
+    "belonging": {"name": "принадлежность и ценности", "why": "клиент присоединяется к своим или поддерживает то, что "
+                                                             "разделяет",
+                  "tools": "сообщество, клуб, общая позиция",
+                  "question": "К какому сообществу или общей позиции клиент хотел бы присоединиться?"},
+    "experience": {"name": "впечатление", "why": "запоминается сам опыт, и о нём рассказывают",
+                   "tools": "необычный сервис, атмосфера, сюрприз",
+                   "question": "Что в работе с вами могло бы запомниться и стать поводом рассказать?"},
+}
+
+
+def _levers_text():
+    return "; ".join(f"{code} — {v['name']}: {v['why']} ({v['tools']})" for code, v in LEVERS.items())
 
 
 def align_mechanism(kind, changed, kept):
@@ -205,7 +327,12 @@ def shift_check(ai, base, new_text, new_xray):
 
 
 # Какая версия промпта работает в сервисе — пишется в события, чтобы данные пилота делились по версиям
-PROMPT_VERSIONS = {"shift_check": "v2", "lenses": "v1"}
+PROMPT_VERSIONS = {"shift_check": "v3", "lenses": "v1", "xray": "v1", "rubric": "v2", "baseline": "v1",
+                   "pattern": "v2"}
+# 19.10: Р16 → v2 (способ воздействия у каждой идеи, группы и уверенность считает код), Р12 → v3 (способ новой
+# идеи, цель, что открывает, риск — для честного «До → После»); сравнение версий — eval pattern / shift
+# 17.10 (docs/llm-quality): рубрика → v2 (лучше на отложенном наборе); рентген v2 и «v1+определения» на dev не
+# лучше v1 и дороже — рентген остаётся v1; чат-бот — решение по eval «mirror» (RESULTS.md)
 
 SHIFT_DIM_DEFS = (
     "механизм — что побуждает клиента действовать и какой барьер при этом снимается; "
@@ -260,6 +387,323 @@ def shift_check_v2(ai, base, new_text, task=None, goal=None):
     user = (f"Задача: {_data(task)}\nЦель: {_data(goal)}\n\nПрежние идеи пользователя:\n{listing}\n\n"
             f"Новая идея: {_data(new_text)}")
     return ai.ask_json("shift_check", system, user, validate, max_tokens=450, temperature=0)
+
+
+def shift_check_v3(ai, base, new_text, task=None, goal=None):
+    """Р12, версия 3 (19.10): то же сравнение, что v2, плюс то, без чего нельзя честно сказать «механизм сменился»:
+    способ воздействия новой идеи из словаря LEVERS (код сверяет его со способами первых идей — training.
+    mechanism_outcome), сохранилась ли цель, что новый способ открывает и какой риск появился. Новых вызовов нет —
+    поля добавлены в тот же ответ. Способы первых идей (из Р16) идут в разбор прежних идей, если они известны."""
+    def validate(d):
+        out = shift_check_v2_validate(d, base)
+        levers = [x for x in (d.get("levers") or []) if x in LEVERS][:2] if isinstance(d.get("levers"), list) else []
+        out.update({"levers": levers, "goal_kept": d.get("goal_kept") if isinstance(d.get("goal_kept"), bool) else None,
+                    "opens": _clean_line(d.get("opens"), 220), "risk": _clean_line(d.get("risk"), 220),
+                    # без уверенности ответ неполный: вывод о смене механизма по нему не делаем
+                    "incomplete": d.get("confidence") not in ("high", "medium", "low"),
+                    "clear": d.get("clear") is not False})
+        return out
+
+    def line(b):
+        lever = LEVERS.get(b.get("lever") or "")
+        return _xray_line(b.get("xray")) + (f"; способ воздействия: {lever['name']}" if lever else "")
+    listing = "\n".join(f"{i}. {_data(b['text'])} — {line(b)}" for i, b in enumerate(base, 1))
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Ты — аналитик механизмов решений. Определи, сменился ли причинный механизм новой идеи по сравнению "
+        "с прежними идеями пользователя. Механизм — это то, что побуждает клиента изменить поведение, и барьер, "
+        "который при этом снимается. Слова, канал, размер выгоды, время акции, упаковка и оформление — НЕ механизм. "
+        "Порядок работы: 1) восстанови для новой идеи new_driver (что побуждает клиента действовать) и new_barrier "
+        "(какой барьер снимается), каждое до 12 слов; 2) сравни их с механизмами прежних идей — они даны разбором; "
+        "3) выбери класс. «механизм» — побуждение или снимаемый барьер другие, чем у ВСЕХ прежних идей; «форма» — "
+        "побуждение и барьер те же, что у одной из прежних (её номер — в same_as), меняются канал, размер, время, "
+        "посредники, упаковка; «нет» — по сути та же идея (номер — в same_as). Типичная ловушка: скидка, бонус, "
+        "подарок, кешбэк, купон, «каждый N-й бесплатно», пробное за символическую цену — один механизм "
+        "(материальная выгода или снижение цены входа), это «форма» относительно такой же прежней идеи; реклама "
+        "в другом канале — «форма» относительно прежней рекламы. Обратная ловушка: если клиент получает другую "
+        "ценность или действовать начинает другой участник ради другой причины — это «механизм», даже если "
+        "слова похожи. Смена механизма — не оценка качества: не хвали и не ругай. "
+        f"Измерения: {SHIFT_DIM_DEFS}. changed — изменившиеся измерения, kept — точно оставшиеся; о чём нельзя "
+        "судить — никуда. confidence — high, medium или low (low, если идея описана слишком скупо). "
+        "explanation — одна-две фразы на «вы»: что изменилось в механизме; для «формы» и «нет» — что осталось "
+        "прежним и что стоит поменять, чтобы сменить принцип, не предлагая готовую идею. "
+        "После этого: levers — способ воздействия новой идеи, 1 код (2 — только если идея прямо держится на двух "
+        f"сразу), выбранный по new_driver, а не по словам, из списка: {_levers_text()}. goal_kept — true, если "
+        "новая идея по-прежнему ведёт к цели задачи, false — если решает уже другую задачу. opens — одна фраза: что "
+        "новый способ даёт по сравнению с прежними идеями (без обещаний результата); risk — одна фраза: какое новое "
+        "допущение или риск появились. Для «формы» и «нет» opens и risk — пустые строки. clear — false, если по "
+        "тексту новой идеи не понять, кто и почему сделает шаг, и причину приходится додумывать; иначе true. "
+        'Формат: {"new_driver": "...", "new_barrier": "...", "shift": "механизм|форма|нет", "same_as": 1 или null, '
+        '"changed": ["..."], "kept": ["..."], "confidence": "high|medium|low", "explanation": "...", '
+        '"levers": ["код"], "goal_kept": true, "opens": "...", "risk": "...", "clear": true}'
+    )
+    user = (f"Задача: {_data(task)}\nЦель: {_data(goal)}\n\nПрежние идеи пользователя:\n{listing}\n\n"
+            f"Новая идея: {_data(new_text)}")
+    return ai.ask_json("shift_check", system, user, validate, max_tokens=560, temperature=0)
+
+
+def shift_check_v2_validate(d, base):
+    """Общая проверка ответа Р12 v2/v3: класс, побуждение и барьер, измерения, уверенность, объяснение."""
+    kind = d.get("shift")
+    if kind not in SHIFT_KINDS:
+        raise ValueError("вид сдвига")
+    driver, barrier = _short(d.get("new_driver"), 200), _short(d.get("new_barrier"), 200)
+    changed = [c for c in d["changed"] if c in SHIFT_DIMS] if isinstance(d.get("changed"), list) else []
+    kept = [c for c in d["kept"] if c in SHIFT_DIMS and c not in changed] if isinstance(d.get("kept"), list) else []
+    changed, kept = align_mechanism(kind, changed, kept)
+    same = d.get("same_as")
+    same = same if isinstance(same, int) and 1 <= same <= len(base) else None
+    conf = d.get("confidence") if d.get("confidence") in ("high", "medium", "low") else "low"
+    return {"shift": kind, "changed": changed, "kept": kept, "same_as": same, "confidence": conf,
+            "new_driver": driver, "new_barrier": barrier, "explanation": _no_examples(_short(d.get("explanation"), 400))}
+
+
+def _clean_line(text, limit):
+    """Необязательная фраза ответа: пусто, если её нет, она длинная или это совет с готовой идеей."""
+    text = str(text or "").strip()
+    if not text or len(text) > limit or any(w in text.lower() for w in _EXAMPLE_WORDS):
+        return ""
+    return text
+
+
+def shift_check_current(ai, base, new_text, task=None, goal=None):
+    """Версия детектора сдвига, которая работает в сервисе (PROMPT_VERSIONS)."""
+    fn = shift_check_v3 if PROMPT_VERSIONS["shift_check"] == "v3" else shift_check_v2
+    return fn(ai, base, new_text, task, goal)
+
+
+# ---------- Р16. Что общего у первых идей (зеркало, 18.10) ----------
+
+PATTERN_DIMS = ("цель", "механизм", "канал", "действие клиента", "ценность", "ресурсы")
+PATTERN_VERDICTS = ("one", "partly", "diverse", "unclear")
+
+
+def pattern(ai, task, goal, ideas):
+    """Версия Р16, которая работает в сервисе (PROMPT_VERSIONS)."""
+    fn = pattern_v2 if PROMPT_VERSIONS.get("pattern") == "v2" else pattern_v1
+    return fn(ai, task, goal, ideas)
+
+
+CONF_ORDER = {"low": 0, "medium": 1, "high": 2}
+_WORD = re.compile(r"[A-Za-zА-Яа-яЁё]{2,}")
+
+
+def cap_confidence(conf, cap):
+    return conf if CONF_ORDER.get(conf, 0) <= CONF_ORDER[cap] else cap
+
+
+def nums(items):
+    """[1, 2, 3] → «1, 2 и 3»."""
+    items = [str(i) for i in items]
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " и " + items[-1]
+
+
+def _norm(text):
+    return " ".join(_WORD.findall((text or "").lower()))
+
+
+def pattern_v2(ai, task, goal, ideas):
+    """Р16 v2 (19.10). Модель разбирает каждую идею по четырём частям — результат, инструмент или канал, причинная
+    связь «клиент сделает…, потому что…» и способ воздействия из словаря LEVERS — и говорит, ясна ли идея. Группы,
+    вердикт и уверенность считает код: колея — только совпадение способа у всех идей, а не похожие слова, цель или
+    канал. Уверенность модели может только понизиться: неясная идея, группа из двух идей, идея в одно слово —
+    не выше «medium». Неясные идеи в группы не попадают, их пробелы показываются человеку."""
+    n = len(ideas)
+
+    def validate(d):
+        raw = d.get("ideas") if isinstance(d.get("ideas"), list) else []
+        if n and not raw:
+            raise ValueError("нет разбора идей")
+        parts = []
+        for i, text in enumerate(ideas, 1):
+            item = raw[i - 1] if i - 1 < len(raw) and isinstance(raw[i - 1], dict) else {}
+            lever = item.get("lever") if item.get("lever") in LEVERS else None
+            because = str(item.get("because") or "").strip()[:180]
+            clear = item.get("clear") is True and bool(lever) and bool(because)
+            missing = "" if clear else (str(item.get("missing") or "").strip()[:140]
+                                        or "по описанию не видно, почему клиент сделает шаг")
+            parts.append({"n": i, "text": text, "result": str(item.get("result") or "").strip()[:90],
+                          "tool": str(item.get("tool") or "").strip()[:90], "because": because,
+                          "lever": lever if clear else None, "clear": clear, "missing": missing})
+        by = {}
+        for p in parts:
+            if p["clear"]:
+                by.setdefault(p["lever"], []).append(p)
+        groups = []
+        for lever, members in by.items():
+            if len(members) < 2:
+                continue
+            differs = [label for key, label in (("tool", "инструмент или канал"), ("result", "ожидаемый результат"))
+                       if len({_norm(m[key]) for m in members if m[key]}) > 1]
+            groups.append({"ideas": [m["n"] for m in members], "lever": lever, "shared": LEVERS[lever]["name"],
+                           "why": LEVERS[lever]["why"], "same": ["способ воздействия"], "differs": differs,
+                           "evidence": [{k: m[k] for k in ("n", "text", "tool", "because")} for m in members]})
+        groups.sort(key=lambda g: -len(g["ideas"]))
+        n_clear = sum(p["clear"] for p in parts)
+        if n < 2 or n_clear < 2:
+            verdict = "unclear"
+        elif groups and len(groups[0]["ideas"]) == n:
+            verdict = "one"
+        elif groups:
+            verdict = "partly"
+        else:
+            verdict = "diverse"
+        model_conf = d.get("confidence") if d.get("confidence") in CONF_ORDER else "low"
+        conf = model_conf
+        if n_clear < n:
+            conf = cap_confidence(conf, "medium")
+        if groups and len(groups[0]["ideas"]) < 3:  # две похожие идеи — ещё не закономерность
+            conf = cap_confidence(conf, "medium")
+        if any(len(_WORD.findall(t)) < 2 for t in ideas):  # идея в одно слово: способ угадан, а не прочитан
+            conf = cap_confidence(conf, "medium")
+        if verdict == "unclear":
+            conf = "low"
+        limit = _clean_line(d.get("limit"), 260) if groups else ""
+        if limit and any(w in limit.lower() for w in ACTION_WORDS):
+            limit = ""
+        if limit:  # живой прогон 19.10: «если издательства не чувствительны к цене» — обрывок вместо фразы
+            limit = limit.rstrip(". ")
+            if re.match(r"(если|когда)\s", limit, re.I):
+                limit = "Не сработает, " + limit[:1].lower() + limit[1:]
+            limit = limit[:1].upper() + limit[1:] + "."
+        headline = _pattern_headline(verdict, groups, parts, n)
+        return {"verdict": verdict, "groups": groups, "ideas": parts, "unclear": [p for p in parts if not p["clear"]],
+                "headline": headline, "insight": headline, "limit": limit, "confidence": conf,
+                "model_confidence": model_conf, "source": "ai", "version": "v2"}
+
+    listing = "\n".join(f"{i}. {_data(t)}" for i, t in enumerate(ideas, 1))
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Найди общее в первых идеях пользователя: держатся ли они на одном способе воздействия на клиента. "
+        "Сравнивай не слова, темы и каналы, а то, почему клиент должен сделать нужный шаг. Для каждой идеи по "
+        "порядку: result — какого результата хотят добиться (до 6 слов); tool — конкретный инструмент или канал "
+        "(до 6 слов); because — причинная связь «клиент сделает [что], потому что [почему]» (до 16 слов); lever — "
+        "способ воздействия: один код из списка, выбранный по because, а не по словам идеи; clear — true, если из "
+        "текста идеи понятно, почему клиент сделает шаг, false — если идея описана так скупо или неоднозначно, что "
+        "причину приходится додумывать; missing — если clear false: чего не хватает в описании (до 12 слов), иначе "
+        f"пустая строка. Способы: {_levers_text()}. Ловушки. Одинаковые слова не значат одинаковый способ: "
+        "«скидка новичку» снимает ценовой барьер первой покупки (price), а «карта прогресса, где каждый визит "
+        "открывает новый уровень» удерживает накопленным прогрессом (habit); «скидка за приведённого друга» держится "
+        "на рекомендации (referral). И наоборот: скидка, промокод, купон, бонус и накопительная скидка — один способ "
+        "price, как бы ни отличались слова, размер, момент и канал. Одинаковые цель, аудитория, канал или формат не "
+        "делают способ одинаковым. limit — если хотя бы две идеи держатся на одном способе: одна фраза, при каком "
+        "условии этот способ не сработает или чего он не может дать в этой задаче, без советов и новых идей; иначе "
+        "пустая строка. confidence — high, medium или low: насколько уверенно определены способы всех идей. "
+        "Не ставь диагнозов человеку, не хвали, не предлагай новых идей. "
+        'Формат: {"ideas": [{"result": "...", "tool": "...", "because": "...", "lever": "код", "clear": true, '
+        '"missing": ""}], "limit": "...", "confidence": "high|medium|low"}'
+    )
+    user = f"Задача: {_data(task)}\nЦель: {_data(goal)}\n\nПервые идеи пользователя:\n{listing}"
+    return ai.ask_json("pattern", system, user, validate, max_tokens=700, temperature=0)
+
+
+def _pattern_headline(verdict, groups, parts, n):
+    """Вывод одной фразой — из групп и разбора идей, а не со слов модели: вывод не может спорить с группами."""
+    def lever_of(p):
+        return LEVERS[p["lever"]]["name"] if p["lever"] else "не ясно, как сработает"
+    if verdict == "unclear":
+        if n < 2:
+            return "Одной идеи мало, чтобы увидеть закономерность."
+        vague = [p["n"] for p in parts if not p["clear"]]
+        return (f"По описанию пока не видно, как сработают идеи {nums(vague)}, — вывод о колее делать рано."
+                if len(vague) > 1 else f"По описанию пока не видно, как сработает идея {vague[0]}, — вывод о колее "
+                                       "делать рано.")
+    if verdict == "one":
+        g = groups[0]
+        return f"{'Обе идеи' if n == 2 else f'Все {n} идеи'} держатся на одном способе — {g['shared']}: {g['why']}."
+    if verdict == "partly":
+        g = groups[0]
+        others = [p for p in parts if p["n"] not in g["ideas"]]
+        tail = "; ".join(f"идея {p['n']} — {lever_of(p)}" for p in others)
+        return f"Идеи {nums(g['ideas'])} держатся на одном способе — {g['shared']}; {tail}."
+    return "Идеи работают по-разному: " + "; ".join(f"идея {p['n']} — {lever_of(p)}" for p in parts) + "."
+
+
+def pattern_v1(ai, task, goal, ideas):
+    """Закономерность в первых идеях: какие идеи держатся на одном механизме и почему — по измерениям (механизм,
+    канал, действие клиента, ценность), а не по словам. Вердикт считается по группам, а не со слов модели: «одна
+    колея» — только если в одну группу попали все идеи. Мало данных — «unclear», без выдуманного вывода."""
+    n = len(ideas)
+
+    def validate(d):
+        parts = []
+        for item in (d.get("ideas") or [])[:n]:
+            item = item if isinstance(item, dict) else {}
+            parts.append({k: (str(item.get(k) or "").strip()[:90]) for k in ("mechanism", "channel", "behavior", "value")})
+        groups = []
+        for g in d.get("groups") or []:
+            if not isinstance(g, dict) or not isinstance(g.get("ideas"), list):
+                continue
+            members = sorted({i for i in g["ideas"] if isinstance(i, int) and not isinstance(i, bool) and 1 <= i <= n})
+            shared = str(g.get("shared") or "").strip()[:160]
+            if len(members) >= 2 and shared:
+                groups.append({"ideas": members, "shared": shared,
+                               "same": [x for x in g.get("same") or [] if x in PATTERN_DIMS],
+                               "differs": [x for x in g.get("differs") or [] if x in PATTERN_DIMS]})
+        groups.sort(key=lambda g: -len(g["ideas"]))
+        insight = _no_examples(_short(d.get("insight"), 320))
+        if any(w in insight.lower() for w in ACTION_WORDS):
+            raise ValueError("совет вместо наблюдения")
+        conf = d.get("confidence") if d.get("confidence") in ("high", "medium", "low") else "low"
+        if d.get("verdict") == "unclear" or n < 2:
+            verdict = "unclear"
+        elif groups and len(groups[0]["ideas"]) == n:
+            verdict = "one"
+        elif groups:
+            verdict = "partly"
+        else:
+            verdict = "diverse"
+        return {"verdict": verdict, "groups": groups, "ideas": parts, "insight": insight, "confidence": conf,
+                "source": "ai"}
+
+    listing = "\n".join(f"{i}. {_data(t)}" for i, t in enumerate(ideas, 1))
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Найди общее в первых идеях пользователя: держатся ли они на одном способе решения задачи. Сравнивай не слова "
+        "и не темы, а то, как идея должна сработать. Для каждой идеи кратко, до 8 слов: mechanism — почему клиент "
+        "сделает нужный шаг; channel — через какой канал или инструмент; behavior — какое действие клиента нужно; "
+        "value — что клиент получает. Затем groups — идеи с ОДНИМ механизмом: разные каналы и формулировки при одном "
+        "механизме — одна группа, похожие слова при разных механизмах — разные группы. У группы: ideas — номера идей; "
+        "shared — общий механизм одной фразой; same — какие измерения совпадают; differs — какие различаются (измерения: "
+        f"{', '.join(PATTERN_DIMS)}). insight — одна-две фразы на «вы»: что общего у идей и чем они на самом деле "
+        "различаются. Только то, что прямо следует из идей: не ставь диагнозов человеку, не хвали, не предлагай новых "
+        "идей и не советуй. Если идей меньше двух или они описаны так скупо, что механизм не определить, — verdict "
+        "unclear, и скажи об этом в insight. verdict: one — все идеи в одной группе; partly — часть; diverse — механизмы "
+        "разные; unclear. confidence: high, medium или low. "
+        'Формат: {"ideas": [{"mechanism": "...", "channel": "...", "behavior": "...", "value": "..."}], '
+        '"groups": [{"ideas": [1, 2], "shared": "...", "same": ["механизм"], "differs": ["канал"]}], '
+        '"verdict": "one|partly|diverse|unclear", "insight": "...", "confidence": "high|medium|low"}'
+    )
+    user = f"Задача: {_data(task)}\nЦель: {_data(goal)}\n\nПервые идеи пользователя:\n{listing}"
+    # разбор каждой идеи в ответе — не для показа, а как рассуждение: без него (17.10→18.10, eval pattern) вердикт
+    # верен в 9 из 16 вместо 14 из 16; цена — 9–19 с, поэтому в сервисе роль идёт в фоне и не держит зеркало
+    return ai.ask_json("pattern", system, user, validate, max_tokens=600, temperature=0)
+
+
+# ---------- Р15. Сверка с обычным чат-ботом (честность зеркала, 17.10) ----------
+
+def chatbot_overlap(ai, idea, answers, task=None, goal=None):
+    """Есть ли среди ответов обычного чат-бота на ту же задачу идея с тем же механизмом, что у идеи человека.
+
+    Детектор сдвига для этого не годится: он строг к ложному сдвигу относительно СВОИХ идей человека и цепляется за
+    отличия в деталях — на эталоне eval/mirror_cases.json он нашёл 3 совпадения из 29 размеченных
+    (docs/llm-quality/RESULTS.md). Здесь вопрос обратный: совпадает ли причина, по которой клиент придёт."""
+    def validate(d):
+        same = d.get("same")
+        same = same if isinstance(same, int) and not isinstance(same, bool) and 1 <= same <= len(answers) else None
+        expl = _short(d.get("explanation"), 300)
+        return {"same": same, "explanation": expl}
+    listing = "\n".join(f"{i}. {_data(a)}" for i, a in enumerate(answers, 1))
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Тебе дают идею пользователя и ответы обычного чат-бота на ту же задачу. Определи, есть ли среди ответов "
+        "идея с ТЕМ ЖЕ механизмом: тот же ответ на вопрос «почему клиент придёт или купит» и тот же снимаемый барьер. "
+        "Детали, конкретизация, канал, размер, формулировка механизм не меняют: «бесплатная консультация по выбору "
+        "ноутбука» и «бесплатный разбор ваших требований к ноутбуку до покупки» — один механизм. Другой механизм — "
+        "когда клиент действует по другой причине или действует другой участник. same — номер такого ответа или "
+        "null, если такого нет. explanation — одна фраза: что совпадает или чем механизм отличается. Не оценивай "
+        "идеи и не хвали. "
+        'Формат: {"same": 2 или null, "explanation": "..."}'
+    )
+    user = (f"Задача: {_data(task)}\nЦель: {_data(goal)}\n\nОтветы обычного чат-бота:\n{listing}\n\n"
+            f"Идея пользователя: {_data(idea)}")
+    return ai.ask_json("chatbot_overlap", system, user, validate, max_tokens=200, temperature=0)
 
 
 # ---------- Р13. Три линзы на задачу (C1 §3) ----------
@@ -392,6 +836,23 @@ def baseline(ai, task_text):
     return ai.ask_json("baseline", system, f"Предложи 6 идей: {task_text}", validate, max_tokens=600, temperature=0.7)
 
 
+def baseline_v2(ai, task_text, goal=None, bans=None):
+    """Р3, версия 2: обычный чат-бот получает то же, что человек написал сервису, — задачу, цель и запреты.
+    В v1 он видел только задачу: сравнение «вы против чат-бота» шло с ослабленным соперником (ТЗ §8)."""
+    def validate(d):
+        ideas = d.get("ideas")
+        if not isinstance(ideas, list) or len(ideas) < 4:
+            raise ValueError("мало идей")
+        return [str(i).strip()[:200] for i in ideas[:10] if str(i).strip()]
+    system = "Ты обычный помощник. Отвечай только JSON: {\"ideas\": [\"...\", ...]}"
+    user = f"Предложи 6 идей: {task_text}"
+    if goal:
+        user += f" Цель: {goal}."
+    if bans:
+        user += f" Ограничения: {bans}."
+    return ai.ask_json("baseline", system, user, validate, max_tokens=600, temperature=0.7)
+
+
 # ---------- Р4. Извлечение причинного допущения ----------
 
 def extract_assumption(ai, favorite, why, goal):
@@ -430,6 +891,75 @@ def adapt_tool(ai, task_text, goal, template, kind, idea=None):
     if idea:
         user += f"\nИдея пользователя: {_data(idea)}"
     return ai.ask_json("adapt_tool", system, user, validate, max_tokens=250)
+
+
+# ---------- Р5 v2. План проверки за 48 часов (18.10) ----------
+
+# Общие советы вместо шага: «изучить аудиторию», «собрать обратную связь», «проверить спрос» — без числа и объекта
+# это не план. Субъективные сигналы («проявит интерес», «положительно отреагирует») без числа не наблюдаемы.
+VAGUE_STEP = re.compile(r"изуч\w*\s+(?:целев\w*\s+)?(?:аудитори|рын|конкурент|потребност)|собра\w*\s+обратн\w*\s+связ|"
+                        r"провер\w*\s+спрос|провести\s+исследован|проанализир|понять\s+потребност|"
+                        r"протестир\w*\s+гипотез|оценить\s+интерес", re.I)
+VAGUE_SIGNAL = re.compile(r"интерес|положительн|понрав|заинтересова|хорош\w*\s+отклик", re.I)
+PAID_STEP = re.compile(r"таргет|платн\w*\s+реклам|запуст\w*\s+реклам|заказ\w*\s+реклам|купить|оплатить|₽|руб", re.I)
+BIG_STEP = re.compile(r"\bmvp\b|разработ\w*\s+(?:приложени|сайт|платформ|бот)|создать\s+(?:приложени|платформ)", re.I)
+
+
+def test_plan(ai, idea, task_text, goal, hypothesis, audience, card_text, template, no_money=False):
+    """План самой дешёвой проверки выбранной идеи — одним вызовом вместо адаптации одного действия: что проверяем,
+    на ком, шаг на 48 часов, сигнал «за» и сигнал «пересмотреть», первый ход сегодня. Шаблон LIB-10 — опора формата.
+
+    hypothesis и audience из разбора идеи — подсказка, а не готовый ответ: живой прогон 18.10 дал из разбора
+    «сработает, если отправка редактору» и «на ком: иллюстратор» (автор идеи вместо клиента). Поэтому допущение и
+    аудиторию называет эта роль; не назвала — остаются значения из разбора.
+
+    19.10: ответ с общим советом вместо шага («изучить аудиторию» без числа и объекта), с ненаблюдаемым сигналом
+    («проявит интерес» без числа), с платным шагом при бюджете 0 (no_money) или с разработкой MVP отклоняется —
+    модель отвечает ещё раз, иначе остаётся прежний путь (шаблон LIB-10)."""
+    def validate(d):
+        step = _short(d.get("step"), 300).rstrip(". ")
+        success, fail = _short(d.get("success"), 220).rstrip(". "), _short(d.get("fail"), 220).rstrip(". ")
+        if any(m in step.lower() for m in EXAMPLE_MARKERS) or re.search(r"\[[^\]]+\]", step):
+            raise ValueError("в шаге пример или слот")
+        if success.lower() == fail.lower():
+            raise ValueError("сигналы совпадают")
+        if VAGUE_STEP.search(step) and not re.search(r"\d", step):
+            raise ValueError("общий совет вместо шага")
+        for signal in (success, fail):
+            if VAGUE_SIGNAL.search(signal) and not re.search(r"\d", signal):
+                raise ValueError("сигнал не наблюдаем")
+        if BIG_STEP.search(step) or (no_money and PAID_STEP.search(step)):
+            raise ValueError("шаг не по ресурсам")
+        assumption = re.sub(r"^(идея\s+)?(сработает,?\s+)?если\s+", "", str(d.get("assumption") or "").strip(),
+                            flags=re.I)[:200].rstrip(". ")
+        who = str(d.get("audience") or "").strip()[:100].rstrip(". ")
+        today = str(d.get("today") or "").strip()[:200].rstrip(". ")
+        if today and (VAGUE_STEP.search(today) or (no_money and PAID_STEP.search(today))):
+            today = ""
+        cap = lambda x: x[:1].upper() + x[1:]  # noqa: E731 — поля показываются отдельными строками
+        return {"step": cap(step), "success": cap(success), "fail": cap(fail), "today": cap(today),
+                "assumption": assumption if len(assumption) >= 8 else "", "audience": who}
+    system = COMMON_RULES + ROLES_NOTE + (
+        " Составь план самой дешёвой проверки идеи пользователя — проверка за 48 часов, не дольше 2 часов работы, "
+        "в рамках его ресурсов. assumption — главное допущение, которое может оказаться неверным и без которого идея "
+        "не сработает: условие о поведении клиента или партнёра, которое продолжает фразу «Идея сработает, если …» "
+        "(без слова «если»), не действие пользователя. Если весь бизнес-результат за 48 часов не проверить, проверяй "
+        "ближайшее критическое допущение, а не всю идею. audience — на ком проверяем: кто из клиентов или партнёров "
+        "должен сделать нужное действие (не сам пользователь), 2–5 слов. step — одно конкретное действие: что "
+        "сделать, с кем или где, сколько (число людей, сообщений, попыток); не новая идея, не список и не общий совет "
+        "вроде «изучить аудиторию», «собрать обратную связь», «проверить спрос». Без платной рекламы, разработки "
+        "MVP, большого бюджета и большой аудитории, если в ресурсах их нет. success — наблюдаемый результат в пользу "
+        "идеи, с числом или явным признаком (ответил, записался, заплатил); fail — наблюдаемый результат, после "
+        "которого идею стоит пересмотреть. today — первый ход на 15–30 минут, который можно сделать сегодня "
+        "(составить список, написать первое сообщение и т. п. — для этой идеи). Шаг проверяет именно assumption. "
+        'Формат: {"assumption": "...", "audience": "...", "step": "...", "success": "...", "fail": "...", '
+        '"today": "..."}'
+    )
+    user = (f"Идея: {_data(idea)}\nЗадача: {_data(task_text)}\nЦель: {_data(goal)}\n"
+            f"Подсказка из разбора идеи (может быть неточной): что проверяем — {_data(hypothesis or 'нет данных')}; "
+            f"кто действует — {_data(audience or 'нет данных')}\n"
+            f"Ресурсы: {_data(card_text)}\nФормат проверки из библиотеки (проверка за 48 часов): {template}")
+    return ai.ask_json("test_plan", system, user, validate, max_tokens=420, temperature=0.2)
 
 
 # ---------- Р6. Коуч-подсказчик ----------
@@ -560,3 +1090,72 @@ def rubric(ai, lib, idea, task_text, goal, card_text):
     )
     user = f"Идея: {_data(idea)}\nЗадача: {_data(task_text)}\nЦель: {_data(goal)}\nКарточка: {_data(card_text)}"
     return ai.ask_json("rubric", system, user, validate, max_tokens=400, temperature=0)
+
+
+def rubric_v2(ai, lib, idea, task_text, goal, card_text, card=None):
+    """Р9, версия 2: уровень — по свидетельству в тексте идеи, с якорями LIB-15; ресурсы (RB2) — правилами.
+
+    v1 давал «нет данных → пропусти, уровень 1 не ставь» (LIB-15, правило 4) без пояснения, что считать нехваткой:
+    размытая идея получала 2, а не 1. И RB2 не сверял идею с карточкой: видео при «навыка видео нет» — 3
+    (eval 17.10, docs/llm-quality/BASELINE.md). Теперь модель перечисляет, что идея требует (needs), а уровень RB2
+    ограничивает engine.resource_fit по карточке — одинаково при каждом запуске и с причиной, которую видно.
+    card — карточка ресурсов словарём (поля LIB-16); без неё — только оценка модели."""
+    ids = ["RB1", "RB2", "RB3", "RB4"]
+    desc = []
+    for rid in ids:
+        r = lib.rubrics[rid]
+        levels = "; ".join(f"{lvl} — {v['description']} (пример: {v['anchors'][0]})"
+                           for lvl, v in sorted(r["levels"].items(), reverse=True))
+        desc.append(f"{rid} {r['name']}: {levels}")
+    options = {f["id"]: f.get("options") or [] for f in lib.card_fields}
+    skills = [o for o in options.get("R05", []) if o != "другое"]
+    uses = list(engine.SENSITIVE_ACTIONS)
+
+    def validate(d):
+        out = {}
+        for item in d.get("criteria", []):
+            rid, level = item.get("id"), item.get("level")
+            if rid in ids and level in (1, 2, 3):
+                out[rid] = {"level": level, "reason": (item.get("reason") or "").strip()[:200],
+                            "evidence": (item.get("evidence") or "").strip()[:160]}
+        if len(out) < 3:
+            raise ValueError("мало критериев")
+        n = d.get("needs") if isinstance(d.get("needs"), dict) else {}
+        num = (lambda v: v if isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0 else None)
+        needs = {"money_rub": num(n.get("money_rub")), "hours_per_week": num(n.get("hours_per_week")),
+                 "helpers": n.get("helpers") is True,
+                 "skills": [x for x in n.get("skills") or [] if x in skills] if isinstance(n.get("skills"), list) else [],
+                 "uses": [x for x in n.get("uses") or [] if x in uses] if isinstance(n.get("uses"), list) else []}
+        return out, needs
+    system = COMMON_RULES + (
+        " Оцени идею по рубрикам — каждый критерий отдельно, по свидетельству. Без итогового балла, без оценки "
+        "оригинальности, без похвалы. Для каждого критерия сначала найди свидетельство — фрагмент идеи или карточки "
+        "(до 12 слов), затем уровень; уровень 3 — только если свидетельство прямо есть в тексте. RB3: 3 — есть "
+        "действие, объект и срок; 2 — понятно, что сделать первым, но объект или срок размыты; 1 — непонятно, с чего "
+        "начать (вместо действия — цель или пожелание). RB4: 3 — названа причина, по которой человек отреагирует; "
+        "2 — причина угадывается; 1 — причины нет. RB1: 3 — понятно, как идея даёт именно этот результат; 2 — ведёт "
+        "через промежуточный результат (внимание, известность); 1 — не про цель. Размытая идея — не «нехватка "
+        "данных», а свидетельство низкого уровня; критерий пропускай, только если в карточке нет нужного поля. "
+        "Отдельно в needs перечисли, что идея потребует за срок задачи: money_rub — прямые расходы деньгами (0, если "
+        "без денег; скидка и упущенная выручка — не расход), hours_per_week — часов в неделю, helpers — нужны ли "
+        f"другие люди кроме пользователя, skills — навыки из списка ({'; '.join(skills)}), без которых идею не "
+        "сделать (обычное письмо или разговор — не навык), uses — какие действия из списка идея требует от "
+        f"пользователя ({'; '.join(uses)}); не требует — пустой список. "
+        f"Рубрики: {' | '.join(desc)}. "
+        'Формат: {"criteria": [{"id": "RB1", "evidence": "...", "level": 1-3, "reason": "одна фраза"}], '
+        '"needs": {"money_rub": 0, "hours_per_week": 3, "helpers": false, "skills": ["..."], "uses": ["..."]}}'
+    )
+    user = f"Идея: {_data(idea)}\nЗадача: {_data(task_text)}\nЦель: {_data(goal)}\nКарточка: {_data(card_text)}"
+    r = ai.ask_json("rubric", system, user, validate, max_tokens=650, temperature=0)
+    if not r:
+        return None
+    out, needs = r
+    if card:  # правила совместимости с карточкой — engine.resource_fit, рядом с П1–П7
+        cap, reasons = engine.resource_fit(needs, card)
+        rb2 = out.get("RB2")
+        if rb2 is None or cap < rb2["level"]:
+            out["RB2"] = {"level": cap, "evidence": "карточка ресурсов", "rule": True,
+                          "reason": "; ".join(reasons) or (rb2 or {}).get("reason", "")}
+    if "RB2" in out:
+        out["RB2"]["needs"] = needs  # что идея требует — видно, почему RB2 такой
+    return out

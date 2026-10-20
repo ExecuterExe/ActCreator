@@ -210,6 +210,35 @@ CREATE TABLE IF NOT EXISTS research_outbox (
     sent_at TEXT
 );
 
+-- Эксперимент «обычный чат-бот против тренировки» (lab.py, docs/product-value/EXPERIMENT_AB.md).
+-- Одна задача и одни первые идеи на участника, две руки по очереди; у каждой руки — одинаковая карточка решения.
+CREATE TABLE IF NOT EXISTS lab_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    code TEXT NOT NULL,              -- код участника от ведущего, без имени
+    arms TEXT NOT NULL,              -- порядок рук: «A,B», «B,A», «A,C», «C,A»
+    pre_json TEXT,                   -- вопросы до сессии
+    task_json TEXT,                  -- задача, цель, запреты — одинаковые для обеих рук
+    first_json TEXT,                 -- первые идеи до любой руки
+    post_json TEXT,                  -- вопросы после обеих рук
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lab_arms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL REFERENCES lab_runs(id),
+    position INTEGER NOT NULL,       -- 1 или 2
+    arm TEXT NOT NULL,               -- A — обычный чат-бот, B — полная тренировка, C — сокращённая
+    session_id INTEGER,              -- тренировка для B и C
+    chat_json TEXT,                  -- переписка руки A: роль, текст, время ответа, токены
+    started_at TEXT,
+    work_done_at TEXT,               -- конец работы в руке (до карточки)
+    card_json TEXT,                  -- карточка решения
+    card_code TEXT,                  -- случайный код карточки для слепой оценки
+    card_at TEXT,
+    UNIQUE (run_id, position)
+);
+
 CREATE TABLE IF NOT EXISTS incubations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id INTEGER NOT NULL UNIQUE REFERENCES sessions(id),
@@ -227,6 +256,8 @@ MIGRATIONS = [
     ("ideas", "xray_json", "TEXT"),      # причинная конструкция идеи: кто, что, за счёт чего, какой барьер
     ("ideas", "version", "INTEGER"),     # номер версии идеи в сессии (эволюция идеи)
     ("ideas", "change_json", "TEXT"),    # что изменилось относительно первых идей / прошлой версии
+    ("experiments", "hypothesis", "TEXT"),  # что проверяем: допущение или риск выбранной идеи (18.10)
+    ("experiments", "audience", "TEXT"),    # на ком или на чём проверяем
 ]
 
 

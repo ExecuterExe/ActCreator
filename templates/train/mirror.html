@@ -6,9 +6,31 @@
 <h1>{{ ui("UI-033") }}</h1>
 {% if m.low_precision %}<p class="callout callout--risk">{{ ui("UI-020") }}</p>{% endif %}
 
-{# Итог одной строкой: сколько разных механизмов на самом деле #}
-<div class="{{ 'rut' if m.n_ideas >= 2 and m.n_families <= 1 else 'callout callout--process' }} reveal">
-  <p style="font-size:var(--fs-lead);font-weight:700;margin:0">{{ ui("UI-034", N=m.n_families, M=m.n_ideas, X=m.n_common) }}</p>
+{# Главное в зеркале: что общего у первых идей и почему (Р16; пока не готов или без ИИ — по направлениям, грубо) #}
+<div id="pattern-slot" {% if pattern_pending %}data-poll="{{ url_for('train.mirror_pattern', sid=sid) }}"{% endif %}>
+  {% with pending = pattern_pending, editable = True %}{% include "train/_pattern.html" %}{% endwith %}
+</div>
+{% if pattern_pending %}
+<script>
+(function () {
+  var slot = document.getElementById('pattern-slot'), tries = 0;
+  function poll() {
+    if (tries++ > 20) { return; }
+    fetch(slot.dataset.poll, {credentials: 'same-origin'}).then(function (r) {
+      if (r.status === 200) { return r.text().then(function (html) { slot.innerHTML = html; }); }
+      setTimeout(poll, 2000);
+    }).catch(function () { setTimeout(poll, 4000); });
+  }
+  setTimeout(poll, 1500);
+})();
+</script>
+{% endif %}
+
+{# Итог одной строкой по каталогу направлений. Когда выше есть разбор «что общего», главный вывод — там:
+   направления грубее механизма (скидка и промокод — разные направления, но один механизм) #}
+{% set has_pattern = p.insight or p.headline %}
+<div class="{{ 'rut' if not has_pattern and m.n_ideas >= 2 and m.n_families <= 1 else 'callout callout--process' }} reveal">
+  <p style="{{ 'margin:0' if has_pattern else 'font-size:var(--fs-lead);font-weight:700;margin:0' }}">{% if has_pattern %}По каталогу направлений — грубее, чем разбор выше: {% endif %}{{ ui("UI-034", N=m.n_families, M=m.n_ideas, X=m.n_common) }}</p>
   {% if m.n_common >= 2 %}<p class="muted" style="margin:6px 0 0">{{ ui("UI-035") }} {{ ui("UI-037") }}</p>{% endif %}
   {% if m.n_ideas and m.n_common == 0 and m.n_families %}<p class="muted" style="margin:6px 0 0">{{ ui("UI-044") }}</p>{% endif %}
   {% if m.n_families == 0 %}<p class="muted" style="margin:6px 0 0">{{ ui("UI-043") }}</p>{% endif %}
@@ -22,6 +44,7 @@
         <span class="caption">Идея {{ loop.index }}{% if r.favorite %} · фаворит{% endif %}</span>
         {% if not r.family %}<span class="tag tag--rare">не распознано</span>
         {% elif r.common %}<span class="tag tag--common">частое направление</span>
+        {% elif r.freq == "uncertain" %}<span class="tag">{{ ui("UI-208") }}</span>
         {% else %}<span class="tag tag--rare">редкое направление</span>{% endif %}
       </div>
       <p class="idea-card__text">{{ r.text }}</p>
@@ -57,7 +80,7 @@
     </article>
   {% endfor %}
 </div>
-<p class="caption">{% if m.common_source == "data" %}{{ ui("UI-048", N=m.n_basis) }}{% elif m.common_source == "seed" %}{{ ui("UI-047") }}{% endif %}</p>
+<p class="caption">{% if m.common_source == "data" %}{{ ui("UI-048", N=m.n_basis) }}{% elif m.common_source == "seed" and m.rare is not none and m.n_samples %}{{ ui("UI-210", N=m.n_samples) }}{% elif m.common_source == "seed" %}{{ ui("UI-047") }}{% endif %}</p>
 
 {% if m.baseline %}
 <details class="panel panel--quiet">
@@ -77,6 +100,7 @@
 <form method="post" data-busy="Ставим диагноз и подбираем инструмент…">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <input type="hidden" name="action" value="continue">
+  {% if flags.flow == "short" %}<details class="panel panel--quiet"><summary>Уточнить главное препятствие — необязательно</summary>{% endif %}
   <h2>{{ ui("UI-169") }}</h2>
   <div class="lenses" role="radiogroup" aria-label="Три линзы на задачу">
     {% for l in lens_rows %}
@@ -105,6 +129,7 @@
   </div>
   <label>{{ ui("UI-173") }} <input type="text" name="own_barrier" maxlength="200"></label>
   <p class="muted">Можно не выбирать — тогда инструмент подберём только по вашим идеям.</p>
+  {% if flags.flow == "short" %}</details>{% endif %}
   <div class="actions"><button type="submit" class="primary">Дальше</button><span class="busy-note" aria-live="polite"></span></div>
 </form>
 {% endblock %}

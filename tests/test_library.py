@@ -65,7 +65,7 @@ class LibraryCountsTest(unittest.TestCase):
     def test_lib11_12_13_14(self):
         self.assertEqual(len(LIB.training), 300)
         self.assertEqual(len(LIB.standard_tasks), 51)
-        self.assertEqual(len(LIB.ui), 207)  # 166 + раздел 19 (v0.5)
+        self.assertEqual(len(LIB.ui), 213)  # 166 + раздел 19 (v0.5) + облако v2, сверка с чат-ботом, смена механизма
         self.assertEqual(len(LIB.baselines), 40)
         self.assertEqual(sum(len(b["answers"]) for b in LIB.baselines.values()), 240)
 

@@ -12,7 +12,7 @@
     {% if start %}<li class="is-start"><span class="v-text">{{ start }}</span> <span class="muted">— первая идея (фаворит)</span></li>{% endif %}
     {% for v in genealogy %}
       <li class="reveal-2 {{ 'is-shift' if v.kind == 'механизм' else ('is-same' if v.kind in ('форма', 'нет') else '') }} {{ 'is-final' if v.stage == 'final' else '' }}">
-        <span class="caption">Версия {{ v.n }}{% if v.kind == "механизм" %} · сдвиг механизма{% elif v.kind %} · та же ветка{% endif %}</span><br>
+        <span class="caption">Версия {{ v.n }}{% if v.kind == "механизм" %} · сдвиг механизма{% elif v.kind == "частично" %} · частичный сдвиг{% elif v.kind %} · та же ветка{% endif %}</span><br>
         <span class="v-text">{{ v.text }}</span>{% if v.mechanism %}<span class="v-meta">{{ v.mechanism }}</span>{% endif %}{% if v.changed %}<span class="v-meta">{{ v.changed }}</span>{% endif %}</li>
     {% endfor %}
   </ol>

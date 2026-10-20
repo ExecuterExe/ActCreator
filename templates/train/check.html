@@ -5,25 +5,27 @@
 <span class="eyebrow">Проверка за 48 часов</span>
 <h1>Самый дешёвый следующий шаг</h1>
 <p>{{ title }}</p>
-<div class="panel task-card reveal">
-  <span class="caption">{{ plan.template.name }} · {{ plan.template.time }}</span>
-  <p style="font-size:var(--fs-lead);font-weight:600;margin:6px 0 0">{{ plan.action }}.</p>
-</div>
 {% if plan.paid %}<p class="callout callout--risk">{{ ui("UI-126") }}</p>{% endif %}
+<p class="muted">Пять коротких ответов — это и есть план. Всё заполнено заранее: поправьте под себя.</p>
 
 <form method="post">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <input type="hidden" name="action" value="save">
+  <label>1. Что проверяем — какое допущение или риск
+    <input type="text" name="hypothesis" maxlength="400" value="{{ values.hypothesis or plan.hypothesis or '' }}"></label>
+  <label>2. На ком или на чём проверяем
+    <input type="text" name="audience" maxlength="400" value="{{ values.audience or plan.audience or '' }}"></label>
   {% if errors.plan %}<p class="error">{{ errors.plan }}</p>{% endif %}
-  <label>{{ ui("UI-121") }}
+  <label>3. {{ ui("UI-121") }} <span class="muted">— не дольше 2 часов работы{% if plan.template.time and not plan.planned %}, формат: {{ plan.template.name|lower }}{% endif %}</span>
     <textarea name="plan" rows="3" maxlength="400">{{ values.plan or plan.action }}</textarea></label>
+  {% if plan.today %}<p class="muted">С чего начать уже сегодня (15–30 минут): {{ plan.today }}.</p>{% endif %}
+  {% if errors.signals %}<p class="error">{{ errors.signals }}</p>{% endif %}
+  <label>4. Какой результат будет говорить в пользу идеи <input type="text" name="ok" maxlength="400" value="{{ values.ok or plan.ok or plan.template.ok }}"></label>
+  <label>5. Какой результат заставит её пересмотреть <input type="text" name="fail" maxlength="400" value="{{ values.fail or plan.fail or plan.template.fail }}"></label>
   {% if errors.when %}<p class="error">{{ errors.when }}</p>{% endif %}
-  <fieldset><legend>Когда</legend>
+  <fieldset><legend>Когда сделаете первый шаг</legend>
     <div class="choices-inline">{% for d in due_options %}<label><input type="radio" name="when" value="{{ d }}" {% if values.when == d %}checked{% endif %}> {{ d }}</label>{% endfor %}</div>
   </fieldset>
-  {% if errors.signals %}<p class="error">{{ errors.signals }}</p>{% endif %}
-  <label>{{ ui("UI-123") }} <input type="text" name="ok" maxlength="400" value="{{ values.ok or plan.template.ok }}"></label>
-  <label>{{ ui("UI-124") }} <input type="text" name="fail" maxlength="400" value="{{ values.fail or plan.template.fail }}"></label>
   <div class="actions"><button type="submit" class="primary">Сохранить план</button></div>
 </form>
 <form method="post">

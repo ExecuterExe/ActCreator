@@ -396,6 +396,10 @@ label.lens:has(> input) { display: block; padding: var(--s4) calc(var(--s4) + 28
 
 /* Хирургия идеи: что изменилось и что осталось; разбор по частям */
 .surgery { margin-top: var(--s3); display: grid; gap: var(--s2); }
+/* «До → После» в карточке версии (19.10): две колонки на широком экране, одна — на телефоне */
+.before-after { margin-top: var(--s3); display: grid; gap: var(--s3); }
+.before-after__col p { margin: 4px 0 0; }
+@media (min-width: 720px) { .before-after { grid-template-columns: 1fr 1fr; } .before-after > p { grid-column: 1 / -1; } }
 .surgery__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
 .surgery__label { min-width: 6.5rem; }
 .surgery__parts { margin: var(--s3) 0 0; }

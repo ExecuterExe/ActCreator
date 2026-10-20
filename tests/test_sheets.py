@@ -256,6 +256,13 @@ class AppsScriptFlowTest(TrainingCase):
 
 
 class _Answer(io.BytesIO):
+    def __init__(self, data, url=""):
+        super().__init__(data)
+        self.url = url
+
+    def geturl(self):
+        return self.url
+
     def __enter__(self):
         return self
 
@@ -266,15 +273,15 @@ class _Answer(io.BytesIO):
 class AppsScriptClientTest(unittest.TestCase):
     URL = "https://script.google.com/macros/s/TEST/exec"
 
-    def call(self, body):
+    def call(self, body, final_url=None, url=None):
         sent = []
 
         def fake_urlopen(req, timeout=None):
             sent.append(json.loads(req.data.decode("utf-8")))
-            return _Answer(body.encode("utf-8"))
+            return _Answer(body.encode("utf-8"), final_url or req.full_url)
 
         with mock.patch.object(sheets.urllib.request, "urlopen", fake_urlopen):
-            client = sheets.AppsScriptClient(self.URL, "секрет")
+            client = sheets.AppsScriptClient(url or self.URL, "секрет")
             result = client.upsert_many({"Т": ["record_id", "a"]}, [("Т", ["id1", None])])
         return sent, result
 
@@ -288,8 +295,38 @@ class AppsScriptClientTest(unittest.TestCase):
     def test_errors_are_explained(self):
         with self.assertRaisesRegex(sheets.SheetsError, "неверный токен"):
             self.call('{"ok": false, "error": "неверный токен"}')
-        with self.assertRaisesRegex(sheets.SheetsError, "доступ к веб-приложению «Все»"):
-            self.call("<html>Вход в аккаунт Google</html>")
+        with self.assertRaisesRegex(sheets.SheetsError, "Google просит войти.*«У кого есть доступ»: Все"):
+            self.call("<html><title>Вход – Google Аккаунты</title></html>",
+                      final_url="https://accounts.google.com/v3/signin/identifier?continue=x")
+        with self.assertRaisesRegex(sheets.SheetsError, "нет функции doPost"):
+            self.call("<html><body><div>Script function not found: doPost</div></body></html>")
+        with self.assertRaisesRegex(sheets.SheetsError, "нет веб-приложения"):
+            self.call("<html><body>Sorry, unable to open the file at this time.</body></html>")
+
+    def test_unknown_page_is_quoted(self):
+        page = ('<html><head><title>Ошибка</title><style>b{}</style></head><body>'
+                '<div>TypeError: Cannot read properties of null (reading &#39;getName&#39;)</div></body></html>')
+        with self.assertRaises(sheets.SheetsError) as caught:
+            self.call(page)
+        self.assertIn("«Ошибка TypeError: Cannot read properties of null (reading 'getName')»", str(caught.exception))
+
+    def test_http_error_is_explained(self):
+        def fail(req, timeout=None):
+            raise sheets.urllib.error.HTTPError(req.full_url, 404, "Not Found", {},
+                                                io.BytesIO("Не удалось открыть файл".encode("utf-8")))
+
+        with mock.patch.object(sheets.urllib.request, "urlopen", fail):
+            with self.assertRaisesRegex(sheets.SheetsError, "ответил 404: по этому адресу нет веб-приложения"):
+                sheets.AppsScriptClient(self.URL, "секрет").ping()
+
+    def test_wrong_url_is_caught_before_sending(self):
+        for url, hint in [("https://script.google.com/macros/s/TEST/dev", "тестовый адрес"),
+                          ("https://script.google.com/u/0/home/projects/TEST/edit", "адрес редактора")]:
+            with mock.patch.object(sheets.urllib.request, "urlopen") as urlopen:
+                with self.assertRaisesRegex(sheets.SheetsError, hint):
+                    sheets.AppsScriptClient(url, "секрет").ping()
+                urlopen.assert_not_called()
+        self.assertIsNone(sheets.script_url_problem("https://script.google.com/a/macros/example.org/s/TEST/exec"))
 
 
 class ClientChoiceTest(TrainingCase):
@@ -302,6 +339,12 @@ class ClientChoiceTest(TrainingCase):
         made, error = self.fresh({"APPS_SCRIPT_URL": AppsScriptClientTest.URL, "APPS_SCRIPT_TOKEN": "x"})
         self.assertIsInstance(made, sheets.AppsScriptClient)
         self.assertIsNone(error)
+
+    def test_dev_url_is_reported_but_rows_still_queue(self):
+        made, error = self.fresh({"APPS_SCRIPT_URL": "https://script.google.com/macros/s/TEST/dev",
+                                  "APPS_SCRIPT_TOKEN": "x"})
+        self.assertIsInstance(made, sheets.AppsScriptClient)
+        self.assertIn("/exec", error)
 
     def test_half_configured_is_reported(self):
         made, error = self.fresh({"APPS_SCRIPT_URL": "https://example.com/exec", "APPS_SCRIPT_TOKEN": ""})

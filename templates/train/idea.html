@@ -27,7 +27,7 @@
   <ol class="evolution">
     {% for v in history %}
       <li class="{{ 'is-shift' if v.kind == 'механизм' else ('is-same' if v.kind in ('форма', 'нет') else '') }}">
-        <span class="caption">Версия {{ v.n }}{% if v.kind == "механизм" %} · сдвиг механизма{% elif v.kind %} · та же ветка{% endif %}</span><br>
+        <span class="caption">Версия {{ v.n }}{% if v.kind == "механизм" %} · сдвиг механизма{% elif v.kind == "частично" %} · частичный сдвиг{% elif v.kind %} · та же ветка{% endif %}</span><br>
         <span class="v-text">{{ v.text }}</span>
         {% if v.mechanism %}<span class="v-meta">{{ v.mechanism }}</span>{% endif %}
         {% if v.changed %}<span class="v-meta">{{ v.changed }}</span>{% endif %}
@@ -44,11 +44,11 @@
   <form method="post" class="actions" data-busy="Готовим оценку…">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     {% if pending.kind == "механизм" %}
-      <button type="submit" name="action" value="accept_version" class="primary">{{ ui("UI-183") }}</button>
+      <button type="submit" name="action" value="accept_version" class="primary">{{ "Перейти к выбору решения" if flags.flow == "short" else ui("UI-183") }}</button>
       {% if pending.n < max_versions %}<button type="submit" name="action" value="improve" data-busy="">{{ ui("UI-182") }}</button>{% endif %}
     {% else %}
       {% if pending.n < max_versions %}<button type="submit" name="action" value="improve" class="primary" data-busy="">{{ ui("UI-182") }}</button>{% endif %}
-      <button type="submit" name="action" value="accept_version" {% if pending.n >= max_versions %}class="primary"{% endif %}>{{ ui("UI-183") }}</button>
+      <button type="submit" name="action" value="accept_version" {% if pending.n >= max_versions %}class="primary"{% endif %}>{{ "Перейти к выбору решения" if flags.flow == "short" else ui("UI-183") }}</button>
     {% endif %}
     <span class="caption">версия {{ pending.n }} из {{ max_versions }}</span>
     <span class="busy-note" aria-live="polite"></span>

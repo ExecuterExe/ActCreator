@@ -9,7 +9,7 @@ import random
 import re
 
 SEED_RANK = {"редко": 0, "средне": 1, "часто": 2}
-TOOL_TYPES = ["assumptions", "chain", "operator", "constraint", "contradiction", "crossing", "reframe"]
+TOOL_TYPES = ["assumptions", "chain", "operator", "constraint", "contradiction", "crossing", "reframe", "switch"]
 TOOL_NAMES = {
     "assumptions": "Допущения задачи",
     "chain": "Взлом причинной цепочки",
@@ -18,6 +18,7 @@ TOOL_NAMES = {
     "contradiction": "Противоречие",
     "crossing": "Скрещивание механизмов",
     "reframe": "Перевёрнутая задача",  # v0.5, C1 §4: цель за целью
+    "switch": "Смена механизма",  # 18.10: задание от найденной колеи (Р16) — та же цель, другая причина действия
 }
 DIAG_TOOL = {"Д0": "assumptions", "Д1": "operator", "Д2": "assumptions", "Д3": "chain",
              "Д4": "contradiction", "Д5": "crossing", "Д—": "constraint"}
@@ -26,9 +27,9 @@ DIAG_UI = {"Д0": "UI-049", "Д1": "UI-050", "Д2": "UI-052", "Д3": "UI-053",
 ALTERNATIVES = {"assumptions": ["operator", "reframe"], "operator": ["constraint", "assumptions"],
                 "chain": ["assumptions", "reframe"], "constraint": ["operator", "assumptions"],
                 "contradiction": ["constraint", "operator"], "crossing": ["operator", "constraint"],
-                "reframe": ["assumptions", "operator"]}
+                "reframe": ["assumptions", "operator"], "switch": ["operator", "assumptions"]}
 WHY_UI = {"assumptions": "UI-062", "chain": "UI-064", "operator": "UI-070", "contradiction": "UI-071",
-          "crossing": "UI-072", "constraint": "UI-065", "reframe": "UI-175"}
+          "crossing": "UI-072", "constraint": "UI-065", "reframe": "UI-175", "switch": "UI-213"}
 CONSTRAINT_WHY = {"family_ban": "UI-066", "sub_ban": "UI-066", "time": "UI-067", "budget": "UI-067",
                   "scale": "UI-067", "antipode": "UI-068", "transfer": "UI-069"}
 
@@ -65,6 +66,50 @@ def common_families(lib, baseline_families=(), data_shares=None, n_sessions=0):
     common = {c for c, f in lib.families.items()
               if f["seed"] == "часто" or (f["seed"] == "средне" and c in base)}
     return common, "seed"
+
+
+CLOUD_SAMPLES = 3  # независимых ответов чат-бота на задачу для частотности (облако v2)
+
+
+def cloud_labels(lib, samples, data_shares=None, n_sessions=0):
+    """Облако v2: у каждого семейства метка «common», «rare» или «uncertain» — и честное «не определено».
+
+    v1 (common_families) брал «средние» семейства из ОДНОГО ответа чат-бота с temperature 0.7: состав облака
+    менялся от запуска к запуску, а всё, чего не было в этой выборке, получало метку «редкое» (09, 10).
+    v2: samples — семейства нескольких независимых ответов чат-бота (множество на ответ).
+    - часто по стартовой оценке LIB-01 или в большинстве ответов — «common»;
+    - «rare» — только «редко» по LIB-01 и ни в одном ответе: редкость утверждаем, когда за неё говорят оба источника;
+    - остальное — «uncertain»: данных мало, и «редким» это не называем.
+    С 30 сессий сферы — частоты по данным людей (как в v1), там выборка уже не случайная."""
+    if data_shares is not None and n_sessions >= MIN_RESPONDENTS:
+        return ({f: "common" if data_shares.get(f, 0) >= COMMON_SHARE else "rare" for f in lib.families}, "data")
+    samples = [set(s) for s in samples if s is not None]
+    labels = {}
+    for code, fam in lib.families.items():
+        hits = sum(code in s for s in samples)
+        if fam["seed"] == "часто" or (samples and hits * 2 > len(samples)):
+            labels[code] = "common"
+        elif fam["seed"] == "редко" and samples and hits == 0:
+            labels[code] = "rare"
+        else:
+            labels[code] = "uncertain"
+    return labels, "seed"
+
+
+def cloud_labels_temp(codes, samples):
+    """Облако v2 для временной таксономии (задача вне сферы): стартовой оценки нет — только ответы чат-бота.
+    «Редкое» — если ни один из нескольких ответов его не назвал; при одном ответе редкость не утверждаем."""
+    samples = [set(s) for s in samples if s is not None]
+    labels = {}
+    for code in codes:
+        hits = sum(code in s for s in samples)
+        if samples and hits * 2 > len(samples):
+            labels[code] = "common"
+        elif len(samples) >= 2 and hits == 0:
+            labels[code] = "rare"
+        else:
+            labels[code] = "uncertain"
+    return labels
 
 
 # ---------- Конфликты с карточкой ресурсов (LIB-16, правила П1–П7) ----------
@@ -134,6 +179,52 @@ def resource_conflicts(lib, code, card):
             if needed and not any(opt in skills for opt in needed):
                 out.append(("П4", "B12", f"нужен навык: {need}"))
     return out
+
+
+BUDGET_MAX = {"0 ₽": 0, "до 5 тыс. ₽": 5000, "5–30 тыс. ₽": 30000, "30–100 тыс. ₽": 100000}
+# Действия, которые человек может не хотеть или не мочь делать: R06 как есть, запреты R12 — через то, что они запрещают
+SENSITIVE_ACTIONS = ("писать и звонить незнакомым", "появляться в видео и на публике", "вести соцсети регулярно",
+                     "давать скидки", "работать бесплатно даже в начале", "платная реклама")
+R12_ACTIONS = {"без скидок": "давать скидки", "без платной рекламы": "платная реклама",
+               "без холодных контактов": "писать и звонить незнакомым",
+               "без публичности": "появляться в видео и на публике"}
+HOURS_MAX = {"меньше 2 ч": 2, "2–5 ч": 5, "5–10 ч": 10}
+
+
+def resource_fit(needs, card):
+    """RB2 «Совместимость с ресурсами» по правилам: что идея требует (оценка рубрики Р9 v2) против карточки
+    LIB-16 → (потолок уровня 1–3, причины). Уровни — по LIB-15: 1 — требует того, чего нет или что человек
+    запретил; 2 — почти весь ресурс или один недостающий элемент («видео-разборы при отсутствии навыка монтажа»).
+    Поле карточки не заполнено — по нему не судим."""
+    level, reasons = 3, []
+
+    def cap(value, why):
+        nonlocal level
+        level = min(level, value)
+        reasons.append(why)
+    money, budget = needs.get("money_rub"), BUDGET_MAX.get(card.get("R01"))
+    if money is not None and budget is not None:
+        if money > budget:
+            cap(1, f"нужно около {int(money)} ₽, а бюджет — {card['R01']}")
+        elif budget and money > 0.8 * budget:
+            cap(2, "уйдёт почти весь бюджет")
+    hours, limit = needs.get("hours_per_week"), HOURS_MAX.get(card.get("R02"))
+    if hours is not None and limit is not None:
+        if hours > 2 * limit:
+            cap(1, f"нужно около {hours:g} ч в неделю, а у вас — {card['R02']}")
+        elif hours > limit:
+            cap(2, "уйдёт больше времени, чем есть в неделю")
+    if needs.get("helpers") and card.get("R04") == "только я":
+        cap(1, "нужны помощники, а вы работаете один")
+    have = card.get("R05") or []
+    missing = [s for s in needs.get("skills") or [] if have and s not in have]
+    if missing:
+        cap(1 if len(missing) > 1 else 2, "нужен навык: " + ", ".join(missing))
+    refused = set(card.get("R06") or []) | {R12_ACTIONS[r] for r in card.get("R12") or [] if r in R12_ACTIONS}
+    banned = [u for u in needs.get("uses") or [] if u in refused]
+    if banned:
+        cap(1, "вы отметили, что не хотите или нельзя: " + ", ".join(banned))
+    return level, reasons
 
 
 # ---------- Навигатор (A2, §2.4) ----------
@@ -492,6 +583,31 @@ LADDER_OPERATIONS = {"участника": ("Участники",), "поряд�
                      "источник ценности": ("Обмен",), "условие задачи": ("Смысл", "Масштаб", "Среда")}
 
 
+def pattern_by_families(families, name, mechanism):
+    """Закономерность первых идей без ИИ — грубо, по семействам (Р16 недоступен). families — семейство каждой идеи
+    (None — не распознано); name(code), mechanism(code) — названия и механизм из таксономии сессии."""
+    n = len(families)
+    known = [f for f in families if f]
+    if n < 2 or len(known) < 2:
+        return {"verdict": "unclear", "groups": [], "ideas": [], "confidence": "low", "source": "rules",
+                "insight": "Идей или распознанных механизмов меньше двух — закономерность по ним не видна."}
+    by = {}
+    for i, f in enumerate(families, 1):
+        if f:
+            by.setdefault(f, []).append(i)
+    groups = sorted(([{"ideas": ids, "shared": f"{name(f)}: {mechanism(f).rstrip('. ').lower()}", "same": ["механизм"],
+                       "differs": []} for f, ids in by.items() if len(ids) >= 2]), key=lambda g: -len(g["ideas"]))
+    if groups and len(groups[0]["ideas"]) == n:
+        verdict, insight = "one", f"Все {n} идеи — из одного направления: {groups[0]['shared']}."
+    elif groups:
+        verdict = "partly"
+        insight = f"{len(groups[0]['ideas'])} из {n} идей — из одного направления: {groups[0]['shared']}."
+    else:
+        verdict, insight = "diverse", "Идеи из разных направлений — одной колеи по ним не видно."
+    return {"verdict": verdict, "groups": groups, "ideas": [], "insight": insight, "confidence": "low",
+            "source": "rules"}
+
+
 def fallback_shift(final_family, base_families):
     """Без ИИ детектор сдвига сравнивает только семейства: другое — «механизм», то же — «форма»."""
     s = shift(final_family, base_families)
@@ -505,6 +621,8 @@ def novelty_level(shift_kind, rare):
     """Ось 1: новизна механизма относительно своих первых идей (+ редкость направления)."""
     if shift_kind == "механизм":
         return "высокая" if rare else "средняя"
+    if shift_kind == "частично":  # 19.10: новый способ добавлен, но прежний остался
+        return "средняя" if rare else "низкая"
     if shift_kind in ("форма", "нет"):
         return "низкая"
     return None

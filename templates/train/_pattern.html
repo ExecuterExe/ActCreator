@@ -1,0 +1,57 @@
+{# Что общего у первых идей (Р16). Параметры: p — разбор (ИИ v2/v1 или грубый по направлениям) с поправкой человека
+   (p.user_verdict), pending — разбор ИИ ещё идёт, ask — колея возможна, но не установлена: спросить прямо,
+   sid, user_options, editable — можно ли поправить вывод (только на шаге зеркала) #}
+{% set verdict = p.user_verdict or p.verdict %}
+{% set conf_word = {"high": "высокая", "medium": "средняя", "low": "низкая"} %}
+{% if p.insight or p.headline %}
+<section class="panel {{ 'rut' if verdict == 'one' and (p.user_verdict or p.confidence == 'high') else '' }} reveal" aria-labelledby="pattern-title" aria-live="polite">
+  <span class="eyebrow" id="pattern-title">
+    {%- if p.user_verdict == "one" %}Одна колея — по вашей оценке
+    {%- elif p.user_verdict == "diverse" %}Разные механизмы — по вашей оценке
+    {%- elif p.user_verdict == "unclear" %}Закономерность не определить — по вашей оценке
+    {%- elif p.verdict == "one" and p.source == "ai" and p.confidence != "high" %}Возможно, одна колея
+    {%- elif p.verdict == "one" %}Одна колея
+    {%- elif p.verdict == "partly" %}Частично одна колея
+    {%- elif p.verdict == "diverse" %}Разные механизмы
+    {%- else %}Закономерность пока не видна{% endif -%}
+  </span>
+  {% if p.user_verdict and p.user_verdict != p.verdict %}<p class="muted" style="margin:6px 0 0">Разбор ИИ считал иначе:</p>{% endif %}
+  <p style="font-size:var(--fs-lead);font-weight:700;margin:6px 0">{{ p.headline or p.insight }}</p>
+  {% for gr in p.groups %}
+    {% if gr.evidence %}
+      {# v2: на чём держится вывод — сами идеи человека и причина шага в каждой #}
+      <p style="margin:6px 0 0">Идеи {{ gr.ideas|join(", ") }} — один способ: {{ gr.shared }}.{% if gr.differs %} Различается: {{ gr.differs|join(", ") }}.{% endif %}</p>
+      <ul class="hint-list">{% for e in gr.evidence %}<li>«{{ e.text }}»{% if e.because %} — <span class="muted">{{ e.because }}</span>{% endif %}</li>{% endfor %}</ul>
+    {% else %}
+      <p style="margin:6px 0 0">Идеи {{ gr.ideas|join(", ") }} — общий механизм: {{ gr.shared }}{% if gr.same %}. Совпадает: {{ gr.same|join(", ") }}{% endif %}{% if gr.differs %}; различается: {{ gr.differs|join(", ") }}{% endif %}.</p>
+    {% endif %}
+  {% endfor %}
+  {% set ns = namespace(grouped=[]) %}{% for gr in p.groups %}{% set ns.grouped = ns.grouped + gr.ideas %}{% endfor %}
+  {% set loose = (p.ideas or [])|selectattr("clear")|rejectattr("n", "in", ns.grouped)|list if p.version == "v2" else [] %}
+  {% if loose %}
+    {# идеи вне групп — тоже с причиной шага: вывод «разные механизмы» опирается на те же идеи #}
+    <ul class="hint-list">{% for i in loose %}<li>«{{ i.text }}»{% if i.because %} — <span class="muted">{{ i.because }}</span>{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if p.limit and verdict in ("one", "partly") %}<p style="margin:6px 0 0"><b>Чем ограничен этот путь:</b> {{ p.limit }}</p>{% endif %}
+  {% if p.unclear %}
+    <p style="margin:6px 0 0">{% if p.unclear|length == 1 %}Идея {{ p.unclear[0].n }} в вывод не вошла{% else %}Идеи {{ p.unclear|map(attribute="n")|join(", ") }} в вывод не вошли{% endif %}: по описанию не видно, как {{ "она сработает" if p.unclear|length == 1 else "они сработают" }}.</p>
+    <ul class="hint-list">{% for u in p.unclear %}<li>«{{ u.text }}» — <span class="muted">не хватает: {{ u.missing }}</span></li>{% endfor %}</ul>
+  {% endif %}
+  <p class="muted" style="margin:6px 0 0">{% if p.source == "ai" %}Разбор ИИ по тому, почему клиент сделает шаг, а не по словам{% if p.confidence %} — уверенность {{ conf_word[p.confidence] }}{% if p.confidence != "high" and p.version == "v2" %}: {% if p.unclear and p.unclear|length == (p.ideas or [])|length %}идеи описаны скупо{% elif p.unclear %}часть идей описана скупо{% elif p.groups and p.groups[0].ideas|length < 3 %}две похожие идеи — ещё не закономерность{% else %}способы определены не наверняка{% endif %}{% endif %}{% endif %}.{% elif pending %}Пока грубо, по направлениям. Разбор по механизму ещё идёт — обычно 5–15 секунд, он появится здесь сам.{% else %}Грубо, по направлениям: разбор по механизму недоступен.{% endif %}</p>
+  {% if p.user_verdict %}
+    <p class="muted" style="margin:6px 0 0">{% if p.user_verdict == "one" %}Вы отметили, что идеи держатся на одном механизме: дальше будет задание сменить его.{% else %}Вы отметили, что вывод о колее неверен: задание «смена механизма» не предлагаем.{% endif %}</p>
+  {% endif %}
+  {% if editable and not pending and p.source %}
+    {# Поправка вывода: человек знает свои идеи лучше разбора. Открыта, только когда колея возможна, но не установлена #}
+    <details class="pattern-fix" {% if ask %}open{% endif %}>
+      <summary>{% if ask %}Похоже на одну колею, но разбор не уверен. Как по-вашему?{% elif p.user_verdict %}Изменить свою оценку{% else %}Вывод неточен?{% endif %}</summary>
+      <form method="post" action="{{ url_for('train.step', sid=sid, step='mirror') }}" class="actions">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="pattern_verdict">
+        {% for key, label in user_options.items() %}<button type="submit" name="verdict" value="{{ key }}"{% if p.user_verdict == key %} aria-pressed="true"{% endif %}>{{ label }}</button>{% endfor %}
+        {% if p.user_verdict %}<button type="submit" name="verdict" value="reset" class="link">Вернуть вывод разбора</button>{% endif %}
+      </form>
+    </details>
+  {% endif %}
+</section>
+{% endif %}

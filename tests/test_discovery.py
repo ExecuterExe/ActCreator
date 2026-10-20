@@ -11,6 +11,7 @@ from pathlib import Path
 
 import db
 import llm
+import training
 from helpers import TrainingCase
 
 
@@ -285,13 +286,16 @@ class RubricPrefetchTest(TrainingCase):
     def test_rubric_computed_with_version(self):
         sid = self.to_idea()
         self.idea(sid, "submit", "Стенд на книжной ярмарке")
-        ch = json.loads(self.q("SELECT change_json FROM ideas WHERE stage = 'version'")[0]["change_json"])
-        self.assertEqual(ch["rubric"]["RB3"]["level"], 1)
+        idea_id = self.q("SELECT id FROM ideas WHERE stage = 'version'")[0]["id"]
+        # с 17.10 рубрика версии считается в фоне, пока человек читает карточку версии (docs/llm-quality)
+        training._PREFETCHED[("rubric", idea_id)][1].result(timeout=10)
         before = len([c for c in self.ai_client.calls if "Оцени идею по рубрикам" in c[0]])
         self.idea(sid, "accept_version")
         self.page(f"/s/{sid}/eval")
         after = len([c for c in self.ai_client.calls if "Оцени идею по рубрикам" in c[0]])
         self.assertEqual(before, after)  # на оценке модель не вызывается — рубрика уже есть
+        ch = json.loads(self.q("SELECT change_json FROM ideas WHERE stage = 'final'")[0]["change_json"])
+        self.assertEqual(ch["rubric"]["RB3"]["level"], 1)
         ev = self.session_json(sid, "eval_json")
         self.assertEqual((ev["rubric_source"], ev["feasibility"]), ("ai", "низкая"))
 

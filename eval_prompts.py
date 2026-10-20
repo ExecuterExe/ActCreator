@@ -12,6 +12,7 @@
 Эталоны — eval/*.json: дополняйте случаями из пилота, где модель ошиблась."""
 
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -35,26 +36,52 @@ WORKERS = 4
 
 class MeteredClient:
     """Свой клиент на каждый поток: счётчик токенов последнего ответа у клиента общий, и в параллели
-    его перезаписал бы соседний вызов."""
+    его перезаписал бы соседний вызов.
+
+    Журнал вызова (EVAL_PLAN §4.3): роль, настройки генерации, отпечаток запроса, сырой ответ, ошибка, время,
+    токены, провайдер. begin()/end() собирают вызовы одного случая — их кладут в строку результата."""
 
     available = True
 
-    def __init__(self, settings):
+    def __init__(self, settings, make=None):
         self.settings = settings
+        self.make = make or llm.make_client
         self.local = threading.local()
         self.lock = threading.Lock()
         self.calls = []
 
-    def complete(self, system, user, **kwargs):
+    def begin(self):
+        self.local.log = []
+
+    def end(self):
+        log, self.local.log = getattr(self.local, "log", None) or [], None
+        return log
+
+    def complete(self, system, user, max_tokens=600, temperature=0.3):
+        import live_run  # разметка роли по тексту запроса — та же, что в живом прогоне
         client = getattr(self.local, "client", None)
         if client is None:
-            client = self.local.client = llm.make_client(self.settings)
-        start = time.monotonic()
-        text = client.complete(system, user, **kwargs)
-        usage = dict(getattr(client, "last_usage", None) or {})
-        with self.lock:
-            self.calls.append({"seconds": time.monotonic() - start, "usage": usage})
-        return text
+            client = self.local.client = self.make(self.settings)
+        start, text, error = time.monotonic(), None, None
+        try:
+            text = client.complete(system, user, max_tokens=max_tokens, temperature=temperature)
+            return text
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            raise
+        finally:
+            meta = dict(getattr(client, "last_meta", None) or {})
+            entry = {"role": live_run.detect_role(system, user), "seconds": round(time.monotonic() - start, 2),
+                     "usage": dict(getattr(client, "last_usage", None) or {}) if error is None else {},
+                     "temperature": temperature, "max_tokens": max_tokens,
+                     "prompt_sha1": hashlib.sha1((system + "\n" + user).encode("utf-8")).hexdigest()[:12],
+                     "provider": meta.get("provider"), "model": meta.get("model"), "attempts": meta.get("attempts"),
+                     "error": error, "raw": text}
+            with self.lock:
+                self.calls.append(entry)
+            log = getattr(self.local, "log", None)
+            if log is not None:
+                log.append(entry)
 
 
 def timed(fn):
@@ -99,6 +126,8 @@ def run_shift(ai, lib, data, repeat, arm_names):
             ai, b, c["text"], (ai_roles.xray(ai, lib, c["text"], s["task"]) or {}).get("xray"))),
         # v2 — рабочий с 13.10: механизм новой идеи восстанавливает сам детектор, знает задачу, цель, измерения
         "v2": lambda c, b, s: timed(lambda: ai_roles.shift_check_v2(ai, b, c["text"], s["task"], s["goal"])),
+        # v3 — рабочий с 19.10: то же + способ воздействия новой идеи, цель, «что открывает», риск (тот же вызов)
+        "v3": lambda c, b, s: timed(lambda: ai_roles.shift_check_v3(ai, b, c["text"], s["task"], s["goal"])),
     }
     arms = {name: fn for name, fn in arms.items() if name in arm_names}
     jobs = [(arm, case, r) for r in range(repeat) for case in data["cases"] for arm in arms]
@@ -320,13 +349,28 @@ def review_sheet(sets, rows):
 # ---------- запуск ----------
 
 def main():
+    import eval_quality  # наборы качества LLM (docs/llm-quality): семейства, рубрика, облако, задержки, сравнение
     parser = argparse.ArgumentParser()
-    parser.add_argument("role", choices=["shift", "lenses"])
+    parser.add_argument("role", choices=["shift", "lenses", *eval_quality.ROLES])
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--split", choices=["all", "dev", "holdout"], default="all")
-    parser.add_argument("--arms", default="v1,v2", help="для детектора сдвига: v1, v1_xray, v2")
+    parser.add_argument("--arms", default=None, help="детектор сдвига: v1, v1_xray, v2 (по умолчанию v1,v2); "
+                                                     "семейства: dict, v1, v2; рубрика: v1, v2")
     parser.add_argument("--rescore", help="пересчитать сохранённый прогон детектора без запросов к модели")
+    parser.add_argument("--suites", default="family,rubric,cloud,overlap,latency", help="для compare: какие наборы")
+    parser.add_argument("--samples", type=int, default=0, help="cloud: сколько ответов чат-бота на задачу запросить")
+    parser.add_argument("--prompt", default="v1", help="cloud: версия промпта чат-бота для корпуса (v1, v2)")
+    parser.add_argument("--offline", action="store_true", help="cloud: только правила по сохранённому корпусу")
+    parser.add_argument("--scale", type=float, default=0.25, help="latency: доля реального времени задержек")
+    parser.add_argument("--out", help="review: куда положить таблицы для разметки")
+    parser.add_argument("--score", help="review: заполненная таблица — посчитать согласие разметчиков")
+    parser.add_argument("--no-head", dest="head", action="store_false",
+                        help="latency: без замера исходной реализации (снимок git HEAD)")
+    parser.add_argument("--think", type=float, default=120, help="latency: секунд человек пишет первые идеи")
     args = parser.parse_args()
+    if args.role in eval_quality.ROLES:
+        return eval_quality.cli(args)
+    args.arms = args.arms or "v1,v2"
     shift_data = json.loads(SHIFT_CASES.read_text(encoding="utf-8"))
     if args.rescore:
         saved = json.loads(Path(args.rescore).read_text(encoding="utf-8"))

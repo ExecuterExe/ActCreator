@@ -1,0 +1,4171 @@
+{
+ "about": "Ответы «обычного чат-бота» (Р3) на задачи eval/family_cases.json — настоящие вызовы модели. Разметка ответов — как в сервисе: словарь LIB-02, затем классификатор Р1. Это корпус для проверки правил облака, а не ответы людей.",
+ "provenance": {
+  "model": "deepseek/deepseek-chat",
+  "date": "2026-10-17",
+  "prompt": "v2",
+  "code": {
+   "git": "b5ab8b3",
+   "dirty": true,
+   "files_sha1": "641589cece23",
+   "prompts": {
+    "shift_check": "v2",
+    "lenses": "v1",
+    "xray": "v1",
+    "rubric": "v2",
+    "baseline": "v1"
+   }
+  },
+  "providers": {
+   "DeepInfra": 43,
+   "StreamLake": 19
+  },
+  "cost": {
+   "calls": 62,
+   "prompt_tokens": 28713,
+   "completion_tokens": 11719,
+   "usd": 0.01962,
+   "errors": 0
+  }
+ },
+ "samples": [
+  {
+   "set": "coffee",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести скидки и акции на напитки и десерты в дневное время (например, с 12:00 до 16:00), чтобы привлечь больше клиентов.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать тематические мероприятия днём: мастер-классы по латте-арту, дегустации кофе, встречи с бариста.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Расширить меню, добавив ланчи, сэндвичи и лёгкие закуски, чтобы привлечь офисных работников и местных жителей.",
+     "family": "F09",
+     "source": "llm"
+    },
+    {
+     "text": "Создать зону с бесплатным Wi-Fi и удобными столами для работы, чтобы привлечь фрилансеров и студентов.",
+     "family": "F13",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить программу лояльности с бонусами за посещение в дневное время, например, двойные баллы за покупки с 12:00 до 16:00.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Провести рекламную кампанию в социальных сетях и локальных группах, акцентируя внимание на преимуществах посещения кофейни днём.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 17.42,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 14.61,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 263,
+      "total_tokens": 345,
+      "cost": 0.00026031,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00026031,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00023407
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "04838edd526e",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Ввести скидки и акции на напитки и десерты в дневное время (например, с 12:00 до 16:00), чтобы привлечь больше клиентов.\",\n    \"Организовать тематические мероприятия днём: мастер-классы по латте-арту, дегустации кофе, встречи с бариста.\",\n    \"Расширить меню, добавив ланчи, сэндвичи и лёгкие закуски, чтобы привлечь офисных работников и местных жителей.\",\n    \"Создать зону с бесплатным Wi-Fi и удобными столами для работы, чтобы привлечь фрилансеров и студентов.\",\n    \"Запустить программу лояльности с бонусами за посещение в дневное время, например, двойные баллы за покупки с 12:00 до 16:00.\",\n    \"Провести рекламную кампанию в социальных сетях и локальных группах, акцентируя внимание на преимуществах посещения кофейни днём.\"\n]}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 2.74,
+     "usage": {
+      "prompt_tokens": 1782,
+      "completion_tokens": 44,
+      "total_tokens": 1826,
+      "cost": 0.0006094,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0006094,
+       "upstream_inference_prompt_cost": 0.00057024,
+       "upstream_inference_completions_cost": 3.916e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "8f06ad660014",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F09.4\", \"confidence\": \"medium\", \"explanation\": \"Сезонные и тематические предложения привлекают клиентов в разное время дня.\"}"
+    }
+   ]
+  },
+  {
+   "set": "coffee",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Введение системы скидок и акций для дневных посетителей, например, 'Счастливые часы' с 14:00 до 17:00.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организация тематических мероприятий днём, таких как мастер-классы по приготовлению кофе, литературные чтения или настольные игры.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Расширение меню для дневного времени, включая лёгкие закуски, десерты и напитки, которые могут привлечь клиентов.",
+     "family": "F09",
+     "source": "llm"
+    },
+    {
+     "text": "Создание уютной зоны для работы с доступом к Wi-Fi и розеткам, чтобы привлечь фрилансеров и студентов.",
+     "family": "F13",
+     "source": "dict"
+    },
+    {
+     "text": "Партнёрство с местными бизнесами для взаимного продвижения, например, скидка на кофе при предъявлении чека из соседнего магазина.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Проведение маркетинговой кампании в социальных сетях, направленной на привлечение дневной аудитории, с акцентом на уникальные предложения и атмосферу.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 19.22,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 14.8,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 259,
+      "total_tokens": 341,
+      "cost": 0.00025675,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00025675,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00023051
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "04838edd526e",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Введение системы скидок и акций для дневных посетителей, например, 'Счастливые часы' с 14:00 до 17:00.\",\n    \"Организация тематических мероприятий днём, таких как мастер-классы по приготовлению кофе, литературные чтения или настольные игры.\",\n    \"Расширение меню для дневного времени, включая лёгкие закуски, десерты и напитки, которые могут привлечь клиентов.\",\n    \"Создание уютной зоны для работы с доступом к Wi-Fi и розеткам, чтобы привлечь фрилансеров и студентов.\",\n    \"Партнёрство с местными бизнесами для взаимного продвижения, например, скидка на кофе при предъявлении чека из соседнего магазина.\",\n    \"Проведение маркетинговой кампании в социальных сетях, направленной на привлечение дневной аудитории, с акцентом на уникальные предложения и атмосферу.\"\n  ]\n}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 4.37,
+     "usage": {
+      "prompt_tokens": 1776,
+      "completion_tokens": 42,
+      "total_tokens": 1818,
+      "cost": 0.0005003478,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0005003478,
+       "upstream_inference_prompt_cost": 0.0004571424,
+       "upstream_inference_completions_cost": 4.32054e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "7caed79fdb63",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"family_id\": \"F09.3\",\n  \"confidence\": \"high\",\n  \"explanation\": \"Необычный формат или новинка\"\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "coffee",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести специальные дневные предложения: скидки на кофе и десерты с 12:00 до 16:00, чтобы привлечь клиентов в менее загруженное время.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать тематические мероприятия днём: мастер-классы по латте-арту, дегустации кофе или встречи с бариста, чтобы создать дополнительный интерес.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить программу лояльности для дневных посетителей: бонусные баллы за покупки в определённое время, которые можно обменять на напитки или закуски.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными офисами и компаниями: предлагать корпоративные скидки на кофе и обеды для сотрудников, которые могут приходить днём.",
+     "family": "F14",
+     "source": "dict"
+    },
+    {
+     "text": "Создать уютную рабочую зону с бесплатным Wi-Fi и розетками, чтобы привлечь фрилансеров и студентов, которые могут работать за чашкой кофе.",
+     "family": "F13",
+     "source": "dict"
+    },
+    {
+     "text": "Расширить меню днём: добавить лёгкие закуски, салаты и сэндвичи, чтобы привлечь клиентов, ищущих место для ланча.",
+     "family": "F09",
+     "source": "llm"
+    }
+   ],
+   "failed": false,
+   "seconds": 21.4,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 16.16,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 295,
+      "total_tokens": 377,
+      "cost": 0.00028879,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00028879,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00026255
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "04838edd526e",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Ввести специальные дневные предложения: скидки на кофе и десерты с 12:00 до 16:00, чтобы привлечь клиентов в менее загруженное время.\",\n    \"Организовать тематические мероприятия днём: мастер-классы по латте-арту, дегустации кофе или встречи с бариста, чтобы создать дополнительный интерес.\",\n    \"Запустить программу лояльности для дневных посетителей: бонусные баллы за покупки в определённое время, которые можно обменять на напитки или закуски.\",\n    \"Сотрудничать с местными офисами и компаниями: предлагать корпоративные скидки на кофе и обеды для сотрудников, которые могут приходить днём.\",\n    \"Создать уютную рабочую зону с бесплатным Wi-Fi и розетками, чтобы привлечь фрилансеров и студентов, которые могут работать за чашкой кофе.\",\n    \"Расширить меню днём: добавить лёгкие закуски, салаты и сэндвичи, чтобы привлечь клиентов, ищущих место для ланча.\"\n  ]\n}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 5.14,
+     "usage": {
+      "prompt_tokens": 1784,
+      "completion_tokens": 44,
+      "total_tokens": 1828,
+      "cost": 0.00061004,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00061004,
+       "upstream_inference_prompt_cost": 0.00057088,
+       "upstream_inference_completions_cost": 3.916e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "a2810012d306",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F09.4\", \"confidence\": \"medium\", \"explanation\": \"Сезонные и тематические предложения привлекают клиентов в определённое время.\"}"
+    }
+   ]
+  },
+  {
+   "set": "coffee",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести скидки или акции на кофе и выпечку в дневное время (например, с 12:00 до 16:00), чтобы привлечь больше клиентов.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать тематические мероприятия днём: мастер-классы по латте-арту, книжные клубы или лекции.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Разработать специальное дневное меню с лёгкими закусками, сэндвичами или десертами, чтобы привлечь тех, кто ищет перекус.",
+     "family": "F09",
+     "source": "llm"
+    },
+    {
+     "text": "Сотрудничать с местными фрилансерами или удалёнными работниками, предлагая комфортные условия для работы (быстрый Wi-Fi, розетки, тихая атмосфера).",
+     "family": "F13",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить программу лояльности: бонусы за посещение в дневное время или накопление баллов за покупки.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Рекламировать кофейню в местных сообществах и соцсетях, делая акцент на уютной атмосфере и выгодных предложениях днём.",
+     "family": "F13",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 18.01,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 15.12,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 271,
+      "total_tokens": 353,
+      "cost": 0.00026743,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00026743,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00024119
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "04838edd526e",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Ввести скидки или акции на кофе и выпечку в дневное время (например, с 12:00 до 16:00), чтобы привлечь больше клиентов.\",\n    \"Организовать тематические мероприятия днём: мастер-классы по латте-арту, книжные клубы или лекции.\",\n    \"Разработать специальное дневное меню с лёгкими закусками, сэндвичами или десертами, чтобы привлечь тех, кто ищет перекус.\",\n    \"Сотрудничать с местными фрилансерами или удалёнными работниками, предлагая комфортные условия для работы (быстрый Wi-Fi, розетки, тихая атмосфера).\",\n    \"Запустить программу лояльности: бонусы за посещение в дневное время или накопление баллов за покупки.\",\n    \"Рекламировать кофейню в местных сообществах и соцсетях, делая акцент на уютной атмосфере и выгодных предложениях днём.\"\n  ]\n}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 2.84,
+     "usage": {
+      "prompt_tokens": 1785,
+      "completion_tokens": 38,
+      "total_tokens": 1823,
+      "cost": 0.00060502,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00060502,
+       "upstream_inference_prompt_cost": 0.0005712,
+       "upstream_inference_completions_cost": 3.382e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "b9ea2de30447",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F09.4\", \"confidence\": \"medium\", \"explanation\": \"Сезонные и тематические предложения как повод прийти\"}"
+    }
+   ]
+  },
+  {
+   "set": "coffee",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести специальные дневные акции, например, 'Счастливый час' с скидками на кофе и десерты с 14:00 до 16:00.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать тематические мастер-классы или встречи, например, по обучению латте-арту или книжные клубы в обеденное время.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить ланч-меню с быстрыми и сытными блюдами, ориентированными на офисных работников и студентов.",
+     "family": "F14",
+     "source": "llm"
+    },
+    {
+     "text": "Создать зону коворкинга с удобными столами, розетками и бесплатным Wi-Fi, чтобы привлечь фрилансеров и удалёнщиков.",
+     "family": "F13",
+     "source": "dict"
+    },
+    {
+     "text": "Провести рекламную кампанию в социальных сетях с акцентом на дневные мероприятия и акции.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными бизнесами, предлагая скидки на кофе для их сотрудников в обеденное время.",
+     "family": "F03",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 16.24,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 13.03,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 238,
+      "total_tokens": 320,
+      "cost": 0.00023806,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00023806,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00021182
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "04838edd526e",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Ввести специальные дневные акции, например, 'Счастливый час' с скидками на кофе и десерты с 14:00 до 16:00.\",\n    \"Организовать тематические мастер-классы или встречи, например, по обучению латте-арту или книжные клубы в обеденное время.\",\n    \"Предложить ланч-меню с быстрыми и сытными блюдами, ориентированными на офисных работников и студентов.\",\n    \"Создать зону коворкинга с удобными столами, розетками и бесплатным Wi-Fi, чтобы привлечь фрилансеров и удалёнщиков.\",\n    \"Провести рекламную кампанию в социальных сетях с акцентом на дневные мероприятия и акции.\",\n    \"Сотрудничать с местными бизнесами, предлагая скидки на кофе для их сотрудников в обеденное время.\"\n]}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.17,
+     "usage": {
+      "prompt_tokens": 1773,
+      "completion_tokens": 50,
+      "total_tokens": 1823,
+      "cost": 0.00061186,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00061186,
+       "upstream_inference_prompt_cost": 0.00056736,
+       "upstream_inference_completions_cost": 4.45e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "22ee49e4e0f6",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F14.1\", \"confidence\": \"medium\", \"explanation\": \"Идея работает через изменение формата предложения, чтобы охватить новую аудиторию в дневное время.\"}"
+    }
+   ]
+  },
+  {
+   "set": "coffee",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести специальные дневные акции, например, 'Кофе + десерт со скидкой 30% с 12:00 до 15:00'.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать тематические мастер-классы или встречи (например, по латте-арту или каллиграфии) в дневное время.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить услугу 'рабочее место с кофе' для фрилансеров и удалёнщиков, включая доступ к Wi-Fi и розеткам.",
+     "family": "F13",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить ланч-меню с лёгкими блюдами и напитками, ориентированное на офисных сотрудников и студентов.",
+     "family": "F14",
+     "source": "llm"
+    },
+    {
+     "text": "Создать программу лояльности с бонусами за посещение в дневное время.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Проводить розыгрыши или конкурсы в социальных сетях, стимулируя подписчиков приходить днём.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 15.6,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 12.48,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 226,
+      "total_tokens": 308,
+      "cost": 0.00022738,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00022738,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00020114
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "04838edd526e",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n  \"Ввести специальные дневные акции, например, 'Кофе + десерт со скидкой 30% с 12:00 до 15:00'.\",\n  \"Организовать тематические мастер-классы или встречи (например, по латте-арту или каллиграфии) в дневное время.\",\n  \"Предложить услугу 'рабочее место с кофе' для фрилансеров и удалёнщиков, включая доступ к Wi-Fi и розеткам.\",\n  \"Запустить ланч-меню с лёгкими блюдами и напитками, ориентированное на офисных сотрудников и студентов.\",\n  \"Создать программу лояльности с бонусами за посещение в дневное время.\",\n  \"Проводить розыгрыши или конкурсы в социальных сетях, стимулируя подписчиков приходить днём.\"\n]}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.08,
+     "usage": {
+      "prompt_tokens": 1774,
+      "completion_tokens": 50,
+      "total_tokens": 1824,
+      "cost": 0.00061218,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00061218,
+       "upstream_inference_prompt_cost": 0.00056768,
+       "upstream_inference_completions_cost": 4.45e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "c002a93f83ca",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F14.1\", \"confidence\": \"medium\", \"explanation\": \"Идея работает через изменение формата предложения, чтобы охватить новую аудиторию в дневное время.\"}"
+    }
+   ]
+  },
+  {
+   "set": "illustrator",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать целевую рассылку по электронной почте небольшим издательствам с предложением услуг и ссылкой на портфолио.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Активно публиковать работы из портфолио в социальных сетях (Instagram, Behance, Dribbble) с хэштегами, связанными с издательствами и иллюстрацией.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить издательствам бесплатный пробный проект (например, иллюстрацию для обложки книги) для демонстрации своих навыков.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Участвовать в профессиональных группах и форумах для иллюстраторов и издателей, чтобы завести полезные знакомства.",
+     "family": "F05",
+     "source": "dict"
+    },
+    {
+     "text": "Создать сайт или лендинг с портфолио, контактной информацией и примерами работ, оптимизированный для поисковых систем.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с авторами или литературными агентствами, которые могут порекомендовать иллюстратора издательствам.",
+     "family": "F03",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.51,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.46,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 238,
+      "total_tokens": 318,
+      "cost": 0.00023742,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00023742,
+       "upstream_inference_prompt_cost": 2.56e-05,
+       "upstream_inference_completions_cost": 0.00021182
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f4b5ec970dc3",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Создать целевую рассылку по электронной почте небольшим издательствам с предложением услуг и ссылкой на портфолио.\",\n    \"Активно публиковать работы из портфолио в социальных сетях (Instagram, Behance, Dribbble) с хэштегами, связанными с издательствами и иллюстрацией.\",\n    \"Предложить издательствам бесплатный пробный проект (например, иллюстрацию для обложки книги) для демонстрации своих навыков.\",\n    \"Участвовать в профессиональных группах и форумах для иллюстраторов и издателей, чтобы завести полезные знакомства.\",\n    \"Создать сайт или лендинг с портфолио, контактной информацией и примерами работ, оптимизированный для поисковых систем.\",\n    \"Сотрудничать с авторами или литературными агентствами, которые могут порекомендовать иллюстратора издательствам.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "illustrator",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать специализированный каталог портфолио для издательств с примерами работ в книжной иллюстрации и отправить его на электронную почту небольших издательств.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать серию бесплатных вебинаров или мастер-классов для начинающих иллюстраторов, чтобы привлечь внимание издательств к своему опыту и профессионализму.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Активно использовать социальные сети для демонстрации своих работ, используя хэштеги, связанные с книжной иллюстрацией и издательским делом.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить издательствам бесплатную иллюстрацию для одной из их будущих публикаций в обмен на возможность быть представленным в их каталоге или на сайте.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Создать и распространить среди издательств электронную книгу или буклет с примерами своих иллюстраций и советами по визуальному оформлению книг.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Установить контакты с редакторами и арт-директорами небольших издательств через профессиональные сети, такие как LinkedIn, предложив свои услуги и предоставив ссылку на портфолио.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 14.77,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 14.72,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 286,
+      "total_tokens": 366,
+      "cost": 0.00028014,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00028014,
+       "upstream_inference_prompt_cost": 2.56e-05,
+       "upstream_inference_completions_cost": 0.00025454
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f4b5ec970dc3",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Создать специализированный каталог портфолио для издательств с примерами работ в книжной иллюстрации и отправить его на электронную почту небольших издательств.\",\n    \"Организовать серию бесплатных вебинаров или мастер-классов для начинающих иллюстраторов, чтобы привлечь внимание издательств к своему опыту и профессионализму.\",\n    \"Активно использовать социальные сети для демонстрации своих работ, используя хэштеги, связанные с книжной иллюстрацией и издательским делом.\",\n    \"Предложить издательствам бесплатную иллюстрацию для одной из их будущих публикаций в обмен на возможность быть представленным в их каталоге или на сайте.\",\n    \"Создать и распространить среди издательств электронную книгу или буклет с примерами своих иллюстраций и советами по визуальному оформлению книг.\",\n    \"Установить контакты с редакторами и арт-директорами небольших издательств через профессиональные сети, такие как LinkedIn, предложив свои услуги и предоставив ссылку на портфолио.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "illustrator",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать специализированный лендинг с портфолио и предложением для издательств, сосредоточившись на нишевых проектах (например, детские книги, научно-популярные издания).",
+     "family": "F09",
+     "source": "dict"
+    },
+    {
+     "text": "Написать персонализированные письма с примерами работ и предложением сотрудничества в небольшие издательства, подчеркивая уникальность своего стиля.",
+     "family": "F05",
+     "source": "dict"
+    },
+    {
+     "text": "Опубликовать портфолио на платформах для фрилансеров (например, Behance, Dribbble) с тегами, ориентированными на издательства и книжную иллюстрацию.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить издательствам бесплатный эскиз для одной из их будущих книг, чтобы продемонстрировать свои навыки и заинтересовать их.",
+     "family": "F06",
+     "source": "llm"
+    },
+    {
+     "text": "Организовать мини-презентацию или вебинар для издательств, где можно рассказать о своем подходе к иллюстрации и показать примеры работ.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с авторами или литературными агентами, предлагая иллюстрации для их проектов, чтобы через них выйти на издательства.",
+     "family": "F02",
+     "source": "llm"
+    }
+   ],
+   "failed": false,
+   "seconds": 21.01,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 13.87,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 268,
+      "total_tokens": 348,
+      "cost": 0.00026412,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00026412,
+       "upstream_inference_prompt_cost": 2.56e-05,
+       "upstream_inference_completions_cost": 0.00023852
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f4b5ec970dc3",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\"Создать специализированный лендинг с портфолио и предложением для издательств, сосредоточившись на нишевых проектах (например, детские книги, научно-популярные издания).\", \"Написать персонализированные письма с примерами работ и предложением сотрудничества в небольшие издательства, подчеркивая уникальность своего стиля.\", \"Опубликовать портфолио на платформах для фрилансеров (например, Behance, Dribbble) с тегами, ориентированными на издательства и книжную иллюстрацию.\", \"Предложить издательствам бесплатный эскиз для одной из их будущих книг, чтобы продемонстрировать свои навыки и заинтересовать их.\", \"Организовать мини-презентацию или вебинар для издательств, где можно рассказать о своем подходе к иллюстрации и показать примеры работ.\", \"Сотрудничать с авторами или литературными агентами, предлагая иллюстрации для их проектов, чтобы через них выйти на издательства.\"]}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 2.67,
+     "usage": {
+      "prompt_tokens": 1784,
+      "completion_tokens": 45,
+      "total_tokens": 1829,
+      "cost": 0.0005054931,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 1664,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0005054931,
+       "upstream_inference_prompt_cost": 0.0004592016,
+       "upstream_inference_completions_cost": 4.62915e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "125c6810431a",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"family_id\": \"F06.2\",\n  \"confidence\": \"high\",\n  \"explanation\": \"через пробную версию или первую сессию\"\n}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 4.38,
+     "usage": {
+      "prompt_tokens": 1782,
+      "completion_tokens": 50,
+      "total_tokens": 1832,
+      "cost": 0.00061474,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00061474,
+       "upstream_inference_prompt_cost": 0.00057024,
+       "upstream_inference_completions_cost": 4.45e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "06e5680dd8ec",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F02.1\", \"confidence\": \"medium\", \"explanation\": \"Использование внимания, которое уже собрали авторы или литературные агенты, для выхода на издательства.\"}"
+    }
+   ]
+  },
+  {
+   "set": "illustrator",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать специализированное портфолио для издательств, добавив примеры иллюстраций для книг, журналов и других печатных материалов.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Написать персонализированные письма с предложением сотрудничества небольшим издательствам, акцентируя внимание на уникальном стиле и опыте.",
+     "family": "F05",
+     "source": "dict"
+    },
+    {
+     "text": "Опубликовать посты в профессиональных группах и форумах для издателей, демонстрируя свои работы и предлагая услуги.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить издательствам бесплатную пробную иллюстрацию для одной из их текущих проектов, чтобы продемонстрировать свои навыки.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать аккаунт на платформах для фрилансеров (например, Behance, Dribbble) и активно участвовать в обсуждениях, чтобы привлечь внимание издателей.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать мини-презентацию или вебинар для издателей, где можно рассказать о своем подходе к созданию иллюстраций и показать примеры работ.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 14.28,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 14.23,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 255,
+      "total_tokens": 335,
+      "cost": 0.00025255,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00025255,
+       "upstream_inference_prompt_cost": 2.56e-05,
+       "upstream_inference_completions_cost": 0.00022695
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f4b5ec970dc3",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать специализированное портфолио для издательств, добавив примеры иллюстраций для книг, журналов и других печатных материалов.\",\n    \"Написать персонализированные письма с предложением сотрудничества небольшим издательствам, акцентируя внимание на уникальном стиле и опыте.\",\n    \"Опубликовать посты в профессиональных группах и форумах для издателей, демонстрируя свои работы и предлагая услуги.\",\n    \"Предложить издательствам бесплатную пробную иллюстрацию для одной из их текущих проектов, чтобы продемонстрировать свои навыки.\",\n    \"Создать аккаунт на платформах для фрилансеров (например, Behance, Dribbble) и активно участвовать в обсуждениях, чтобы привлечь внимание издателей.\",\n    \"Организовать мини-презентацию или вебинар для издателей, где можно рассказать о своем подходе к созданию иллюстраций и показать примеры работ.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "illustrator",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать тематическую рассылку с примерами работ и отправить её в небольшие издательства, предлагая свои услуги иллюстратора.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить портфолио на специализированных платформах для фрилансеров (например, Behance, Dribbble) и активно участвовать в обсуждениях, чтобы привлечь внимание.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить издательствам бесплатную иллюстрацию для одной из их публикаций в обмен на возможность использовать её в своём портфолио и рекомендации.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать мини-презентацию или вебинар для издательств, где рассказывать о своём подходе к иллюстрации и показывать примеры работ.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Создать аккаунт в социальных сетях (Instagram, LinkedIn) и регулярно публиковать свои работы, используя хэштеги, связанные с издательствами и иллюстрацией.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Написать личные письма или позвонить в издательства с предложением сотрудничества, акцентируя внимание на уникальности своего стиля и готовности адаптироваться под их нужды.",
+     "family": "F05",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 15.21,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 15.14,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 275,
+      "total_tokens": 355,
+      "cost": 0.00027035,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00027035,
+       "upstream_inference_prompt_cost": 2.56e-05,
+       "upstream_inference_completions_cost": 0.00024475
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f4b5ec970dc3",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n  \"Создать тематическую рассылку с примерами работ и отправить её в небольшие издательства, предлагая свои услуги иллюстратора.\",\n  \"Разместить портфолио на специализированных платформах для фрилансеров (например, Behance, Dribbble) и активно участвовать в обсуждениях, чтобы привлечь внимание.\",\n  \"Предложить издательствам бесплатную иллюстрацию для одной из их публикаций в обмен на возможность использовать её в своём портфолио и рекомендации.\",\n  \"Организовать мини-презентацию или вебинар для издательств, где рассказывать о своём подходе к иллюстрации и показывать примеры работ.\",\n  \"Создать аккаунт в социальных сетях (Instagram, LinkedIn) и регулярно публиковать свои работы, используя хэштеги, связанные с издательствами и иллюстрацией.\",\n  \"Написать личные письма или позвонить в издательства с предложением сотрудничества, акцентируя внимание на уникальности своего стиля и готовности адаптироваться под их нужды.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "illustrator",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать целевую рассылку по небольшим издательствам с предложением услуг и ссылкой на портфолио.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Активно участвовать в профессиональных сообществах и форумах, где общаются представители издательств.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить издательствам бесплатный эскиз одной иллюстрации в обмен на возможность презентовать свои работы.",
+     "family": "F14",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети для продвижения своих работ, используя хэштеги, связанные с издательской деятельностью.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать онлайн-выставку своих работ и пригласить на неё представителей небольших издательств.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с литературными агентами и авторами, которые могут рекомендовать иллюстратора издательствам.",
+     "family": "F04",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 10.31,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 10.26,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 194,
+      "total_tokens": 274,
+      "cost": 0.00019826,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00019826,
+       "upstream_inference_prompt_cost": 2.56e-05,
+       "upstream_inference_completions_cost": 0.00017266
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f4b5ec970dc3",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n  \"Создать целевую рассылку по небольшим издательствам с предложением услуг и ссылкой на портфолио.\",\n  \"Активно участвовать в профессиональных сообществах и форумах, где общаются представители издательств.\",\n  \"Предложить издательствам бесплатный эскиз одной иллюстрации в обмен на возможность презентовать свои работы.\",\n  \"Использовать социальные сети для продвижения своих работ, используя хэштеги, связанные с издательской деятельностью.\",\n  \"Организовать онлайн-выставку своих работ и пригласить на неё представителей небольших издательств.\",\n  \"Сотрудничать с литературными агентами и авторами, которые могут рекомендовать иллюстратора издательствам.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "yoga",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести скидки или акции для утренних занятий, например, 'Йога за полцены до 10 утра'.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать бесплатные пробные занятия по утрам для новичков.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать тематические утренние программы, такие как 'Йога для бодрости' или 'Йога для хорошего настроения'.",
+     "family": "F09",
+     "source": "dict"
+    },
+    {
+     "text": "Партнерство с местными кафе для предложения скидок на завтрак после утренней йоги.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Провести конкурс в социальных сетях с розыгрышем абонемента на утренние занятия.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать 'Йога-марафоны' по утрам в выходные дни с призами для участников.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.24,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.19,
+     "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 180,
+      "total_tokens": 261,
+      "cost": 0.00018612,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00018612,
+       "upstream_inference_prompt_cost": 2.592e-05,
+       "upstream_inference_completions_cost": 0.0001602
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f8f62ac5c6fe",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\"Ввести скидки или акции для утренних занятий, например, 'Йога за полцены до 10 утра'.\", \"Организовать бесплатные пробные занятия по утрам для новичков.\", \"Создать тематические утренние программы, такие как 'Йога для бодрости' или 'Йога для хорошего настроения'.\", \"Партнерство с местными кафе для предложения скидок на завтрак после утренней йоги.\", \"Провести конкурс в социальных сетях с розыгрышем абонемента на утренние занятия.\", \"Организовать 'Йога-марафоны' по утрам в выходные дни с призами для участников.\"]}"
+    }
+   ]
+  },
+  {
+   "set": "yoga",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Предложить скидки или абонементы со специальными условиями для утренних занятий, чтобы мотивировать клиентов приходить раньше.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать \"Утренний марафон\" с призами для тех, кто посетит определенное количество утренних занятий за 6 недель.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создать уникальные утренние программы, например, \"Йога с рассветом\", которые будут доступны только в утренние часы.",
+     "family": "F09",
+     "source": "dict"
+    },
+    {
+     "text": "Провести серию бесплатных пробных утренних занятий для новичков, чтобы привлечь новых клиентов.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети и рекламу для продвижения преимуществ утренних занятий, таких как повышение продуктивности и улучшение настроения на весь день.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными бизнесами для создания совместных акций, например, предложение бесплатного кофе после утренней йоги в ближайшем кафе.",
+     "family": "F03",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 13.5,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 13.45,
+     "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 233,
+      "total_tokens": 314,
+      "cost": 0.00023329,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00023329,
+       "upstream_inference_prompt_cost": 2.592e-05,
+       "upstream_inference_completions_cost": 0.00020737
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f8f62ac5c6fe",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\n  \"Предложить скидки или абонементы со специальными условиями для утренних занятий, чтобы мотивировать клиентов приходить раньше.\",\n  \"Организовать \\\"Утренний марафон\\\" с призами для тех, кто посетит определенное количество утренних занятий за 6 недель.\",\n  \"Создать уникальные утренние программы, например, \\\"Йога с рассветом\\\", которые будут доступны только в утренние часы.\",\n  \"Провести серию бесплатных пробных утренних занятий для новичков, чтобы привлечь новых клиентов.\",\n  \"Использовать социальные сети и рекламу для продвижения преимуществ утренних занятий, таких как повышение продуктивности и улучшение настроения на весь день.\",\n  \"Сотрудничать с местными бизнесами для создания совместных акций, например, предложение бесплатного кофе после утренней йоги в ближайшем кафе.\"\n]}"
+    }
+   ]
+  },
+  {
+   "set": "yoga",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Предложить скидку на утренние занятия для новых клиентов.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать бесплатные пробные утренние занятия для всех желающих.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать программу лояльности с бонусами за посещение утренних групп.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Провести утренние тематические занятия (например, йога для начинающих или медитация).",
+     "family": "F09",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с ближайшими офисами, предлагая сотрудникам утренние занятия как часть корпоративной wellness-программы.",
+     "family": "F14",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить рекламную кампанию в соцсетях с акцентом на пользу утренней йоги для здоровья и продуктивности.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 9.1,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 9.07,
+     "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 164,
+      "total_tokens": 245,
+      "cost": 0.00017188,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00017188,
+       "upstream_inference_prompt_cost": 2.592e-05,
+       "upstream_inference_completions_cost": 0.00014596
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f8f62ac5c6fe",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\"Предложить скидку на утренние занятия для новых клиентов.\", \"Организовать бесплатные пробные утренние занятия для всех желающих.\", \"Создать программу лояльности с бонусами за посещение утренних групп.\", \"Провести утренние тематические занятия (например, йога для начинающих или медитация).\", \"Сотрудничать с ближайшими офисами, предлагая сотрудникам утренние занятия как часть корпоративной wellness-программы.\", \"Запустить рекламную кампанию в соцсетях с акцентом на пользу утренней йоги для здоровья и продуктивности.\"]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "yoga",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Предложить специальные утренние абонементы со скидкой для тех, кто готов посещать занятия регулярно.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать бесплатный пробный урок для новичков в утреннее время, чтобы привлечь новых клиентов.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать программу \"Утренний старт\", включающую кофе или чай после занятия, чтобы сделать посещение более привлекательным.",
+     "family": "F07",
+     "source": "llm"
+    },
+    {
+     "text": "Запустить рекламную кампанию в социальных сетях с акцентом на преимущества утренних занятий йогой для продуктивного дня.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить корпоративным клиентам специальные условия для утренних занятий, чтобы сотрудники могли заниматься перед работой.",
+     "family": "F14",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать тематические утренние занятия, такие как \"Йога для бодрости\" или \"Йога для концентрации\", чтобы заинтересовать аудиторию.",
+     "family": "F06",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 14.96,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.3,
+     "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 215,
+      "total_tokens": 296,
+      "cost": 0.00021727,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00021727,
+       "upstream_inference_prompt_cost": 2.592e-05,
+       "upstream_inference_completions_cost": 0.00019135
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f8f62ac5c6fe",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\n    \"Предложить специальные утренние абонементы со скидкой для тех, кто готов посещать занятия регулярно.\",\n    \"Организовать бесплатный пробный урок для новичков в утреннее время, чтобы привлечь новых клиентов.\",\n    \"Создать программу \\\"Утренний старт\\\", включающую кофе или чай после занятия, чтобы сделать посещение более привлекательным.\",\n    \"Запустить рекламную кампанию в социальных сетях с акцентом на преимущества утренних занятий йогой для продуктивного дня.\",\n    \"Предложить корпоративным клиентам специальные условия для утренних занятий, чтобы сотрудники могли заниматься перед работой.\",\n    \"Организовать тематические утренние занятия, такие как \\\"Йога для бодрости\\\" или \\\"Йога для концентрации\\\", чтобы заинтересовать аудиторию.\"\n]}"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.62,
+     "usage": {
+      "prompt_tokens": 1768,
+      "completion_tokens": 49,
+      "total_tokens": 1817,
+      "cost": 0.0005054895,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 1664,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0005054895,
+       "upstream_inference_prompt_cost": 0.0004550832,
+       "upstream_inference_completions_cost": 5.04063e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "6e6a3f1e32c8",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"family_id\": \"F07.2\",\n  \"confidence\": \"high\",\n  \"explanation\": \"добавление подарков и бонусов к покупке\"\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "yoga",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Организовать утренние акции и скидки для первых посетителей, например, бесплатный чай или скидка на абонемент.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создать специальные утренние программы, такие как 'Йога для бодрости' или 'Утренняя медитация', чтобы привлечь тех, кто ищет энергию на весь день.",
+     "family": "F09",
+     "source": "llm"
+    },
+    {
+     "text": "Провести бесплатные пробные утренние занятия для новых клиентов, чтобы они могли попробовать и втянуться.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными кафе для предложения комбинированных скидок, например, йога утром + кофе со скидкой.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети для продвижения утренних занятий, публикуя вдохновляющие посты и отзывы от утренних посетителей.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать утренние мастер-классы или лекции о пользе йоги и здорового образа жизни, чтобы привлечь новую аудиторию.",
+     "family": "F12",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 18.31,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 14.68,
+     "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 251,
+      "total_tokens": 332,
+      "cost": 0.00024931,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00024931,
+       "upstream_inference_prompt_cost": 2.592e-05,
+       "upstream_inference_completions_cost": 0.00022339
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f8f62ac5c6fe",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\n  \"ideas\": [\n    \"Организовать утренние акции и скидки для первых посетителей, например, бесплатный чай или скидка на абонемент.\",\n    \"Создать специальные утренние программы, такие как 'Йога для бодрости' или 'Утренняя медитация', чтобы привлечь тех, кто ищет энергию на весь день.\",\n    \"Провести бесплатные пробные утренние занятия для новых клиентов, чтобы они могли попробовать и втянуться.\",\n    \"Сотрудничать с местными кафе для предложения комбинированных скидок, например, йога утром + кофе со скидкой.\",\n    \"Использовать социальные сети для продвижения утренних занятий, публикуя вдохновляющие посты и отзывы от утренних посетителей.\",\n    \"Организовать утренние мастер-классы или лекции о пользе йоги и здорового образа жизни, чтобы привлечь новую аудиторию.\"\n  ]\n}"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.59,
+     "usage": {
+      "prompt_tokens": 1781,
+      "completion_tokens": 48,
+      "total_tokens": 1829,
+      "cost": 0.00061264,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00061264,
+       "upstream_inference_prompt_cost": 0.00056992,
+       "upstream_inference_completions_cost": 4.272e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "cb07ddc92f3c",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F09.4\", \"confidence\": \"medium\", \"explanation\": \"Идея работает через сезонные и тематические предложения, адаптированные под утренний спрос.\"}"
+    }
+   ]
+  },
+  {
+   "set": "yoga",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести специальные утренние акции: скидки или абонементы для тех, кто посещает занятия до 10 утра.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать бесплатные пробные утренние занятия для новичков с возможностью записи в группу.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать мотивационную программу с призами для тех, кто регулярно посещает утренние занятия.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Провести утренние тематические занятия (например, йога для бодрости, медитация для настроения), чтобы привлечь интерес.",
+     "family": "F09",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить рекламную кампанию в социальных сетях с акцентом на преимущества утренней йоги (энергия, продуктивность, начало дня).",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с ближайшими кафе или кофейнями для предложения скидок на завтрак после утреннего занятия.",
+     "family": "F03",
+     "source": "llm"
+    }
+   ],
+   "failed": false,
+   "seconds": 15.7,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 12.59,
+     "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 216,
+      "total_tokens": 297,
+      "cost": 0.00021816,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00021816,
+       "upstream_inference_prompt_cost": 2.592e-05,
+       "upstream_inference_completions_cost": 0.00019224
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "f8f62ac5c6fe",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Ввести специальные утренние акции: скидки или абонементы для тех, кто посещает занятия до 10 утра.\",\n    \"Организовать бесплатные пробные утренние занятия для новичков с возможностью записи в группу.\",\n    \"Создать мотивационную программу с призами для тех, кто регулярно посещает утренние занятия.\",\n    \"Провести утренние тематические занятия (например, йога для бодрости, медитация для настроения), чтобы привлечь интерес.\",\n    \"Запустить рекламную кампанию в социальных сетях с акцентом на преимущества утренней йоги (энергия, продуктивность, начало дня).\",\n    \"Сотрудничать с ближайшими кафе или кофейнями для предложения скидок на завтрак после утреннего занятия.\"\n]}\n```"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.07,
+     "usage": {
+      "prompt_tokens": 1772,
+      "completion_tokens": 46,
+      "total_tokens": 1818,
+      "cost": 0.000503433,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.000503433,
+       "upstream_inference_prompt_cost": 0.0004561128,
+       "upstream_inference_completions_cost": 4.73202e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "21eaaefd9552",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"family_id\": \"F03.1\",\n  \"confidence\": \"high\",\n  \"explanation\": \"кросс-промо со смежным бизнесом\"\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "bakery",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести систему предзаказов через мобильное приложение или сайт, чтобы печь только необходимое количество хлеба.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидки на хлеб в вечернее время, чтобы стимулировать продажи перед закрытием.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создать комбо-предложения: кофе + свежий хлеб утром и кофе + оставшийся хлеб вечером со скидкой.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить акцию «Хлеб на завтра»: купи хлеб вечером и получи скидку на утренний кофе.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать партнёрство с местными кафе или ресторанами, чтобы продавать излишки хлеба.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатный кусок хлеба к каждому утреннему кофе, чтобы увеличить спрос на свежий хлеб.",
+     "family": "F07",
+     "source": "llm"
+    }
+   ],
+   "failed": false,
+   "seconds": 15.37,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 12.23,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 215,
+      "total_tokens": 297,
+      "cost": 0.00021759,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00021759,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00019135
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "166f5cde9058",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\n    \"Ввести систему предзаказов через мобильное приложение или сайт, чтобы печь только необходимое количество хлеба.\",\n    \"Предложить скидки на хлеб в вечернее время, чтобы стимулировать продажи перед закрытием.\",\n    \"Создать комбо-предложения: кофе + свежий хлеб утром и кофе + оставшийся хлеб вечером со скидкой.\",\n    \"Запустить акцию «Хлеб на завтра»: купи хлеб вечером и получи скидку на утренний кофе.\",\n    \"Организовать партнёрство с местными кафе или ресторанами, чтобы продавать излишки хлеба.\",\n    \"Предложить бесплатный кусок хлеба к каждому утреннему кофе, чтобы увеличить спрос на свежий хлеб.\"\n]}"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.11,
+     "usage": {
+      "prompt_tokens": 1781,
+      "completion_tokens": 49,
+      "total_tokens": 1830,
+      "cost": 0.0005088357,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 1664,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0005088357,
+       "upstream_inference_prompt_cost": 0.0004584294,
+       "upstream_inference_completions_cost": 5.04063e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "ea7e18999444",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"family_id\": \"F07.2\",\n  \"confidence\": \"high\",\n  \"explanation\": \"добавление подарка к покупке для увеличения спроса\"\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "bakery",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести систему предзаказов на хлеб через мобильное приложение или сайт, чтобы печь только необходимое количество.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидки на хлеб после определённого времени, например, после 18:00.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать акцию 'Кофе + хлеб' с утра, стимулируя одновременную покупку.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создать программу лояльности, где за каждый купленный хлеб начисляются баллы, которые можно обменять на кофе или выпечку.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Провести мастер-классы по выпечке хлеба прямо в пекарне, чтобы привлечь клиентов и продать остатки.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить местным кафе и ресторанам покупать остатки хлеба по сниженной цене для использования в своих блюдах.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.88,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.85,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 197,
+      "total_tokens": 279,
+      "cost": 0.00020157,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00020157,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00017533
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "166f5cde9058",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\"Ввести систему предзаказов на хлеб через мобильное приложение или сайт, чтобы печь только необходимое количество.\", \"Предложить скидки на хлеб после определённого времени, например, после 18:00.\", \"Организовать акцию 'Кофе + хлеб' с утра, стимулируя одновременную покупку.\", \"Создать программу лояльности, где за каждый купленный хлеб начисляются баллы, которые можно обменять на кофе или выпечку.\", \"Провести мастер-классы по выпечке хлеба прямо в пекарне, чтобы привлечь клиентов и продать остатки.\", \"Предложить местным кафе и ресторанам покупать остатки хлеба по сниженной цене для использования в своих блюдах.\"]}"
+    }
+   ]
+  },
+  {
+   "set": "bakery",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести систему предзаказов на хлеб через мобильное приложение или сайт, чтобы точно знать объемы производства.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидки на хлеб в послеобеденное время, чтобы стимулировать продажи.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать акцию 'Купи кофе утром - получи скидку на хлеб вечером'.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Продавать остатки хлеба местным ресторанам или кафе по сниженной цене.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создать 'хлебные корзины' с набором выпечки для семейного ужина и рекламировать их вечером.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Проводить мастер-классы по приготовлению блюд из вчерашнего хлеба, чтобы привлечь клиентов и уменьшить остатки.",
+     "family": "F12",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.47,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.43,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 188,
+      "total_tokens": 270,
+      "cost": 0.00019356,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00019356,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00016732
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "166f5cde9058",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\"Ввести систему предзаказов на хлеб через мобильное приложение или сайт, чтобы точно знать объемы производства.\", \"Предложить скидки на хлеб в послеобеденное время, чтобы стимулировать продажи.\", \"Организовать акцию 'Купи кофе утром - получи скидку на хлеб вечером'.\", \"Продавать остатки хлеба местным ресторанам или кафе по сниженной цене.\", \"Создать 'хлебные корзины' с набором выпечки для семейного ужина и рекламировать их вечером.\", \"Проводить мастер-классы по приготовлению блюд из вчерашнего хлеба, чтобы привлечь клиентов и уменьшить остатки.\"]}"
+    }
+   ]
+  },
+  {
+   "set": "bakery",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести систему предзаказа: клиенты могут заказывать хлеб и выпечку заранее через мобильное приложение или сайт, чтобы пекарня готовила точное количество.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидки на свежий хлеб ближе к вечеру, например, «2 по цене 1» или скидки от 30% для стимулирования продаж.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными кафе и ресторанами, предлагая им свежий хлеб для их меню.",
+     "family": "F03",
+     "source": "llm"
+    },
+    {
+     "text": "Организовать акции или лояльности программы для постоянных клиентов, например, бесплатный кофе после покупки хлеба 5 раз.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Расширить ассортимент вечерних продуктов, например, предложить свежие булочки для ужина или готовые сэндвичи.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети для продвижения свежего хлеба, публикуя фотографии и рассказывая о преимуществах продукции.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 17.21,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 13.79,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 241,
+      "total_tokens": 323,
+      "cost": 0.00024073,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00024073,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00021449
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "166f5cde9058",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\n    \"Ввести систему предзаказа: клиенты могут заказывать хлеб и выпечку заранее через мобильное приложение или сайт, чтобы пекарня готовила точное количество.\",\n    \"Предложить скидки на свежий хлеб ближе к вечеру, например, «2 по цене 1» или скидки от 30% для стимулирования продаж.\",\n    \"Сотрудничать с местными кафе и ресторанами, предлагая им свежий хлеб для их меню.\",\n    \"Организовать акции или лояльности программы для постоянных клиентов, например, бесплатный кофе после покупки хлеба 5 раз.\",\n    \"Расширить ассортимент вечерних продуктов, например, предложить свежие булочки для ужина или готовые сэндвичи.\",\n    \"Использовать социальные сети для продвижения свежего хлеба, публикуя фотографии и рассказывая о преимуществах продукции.\"\n]}"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 3.37,
+     "usage": {
+      "prompt_tokens": 1776,
+      "completion_tokens": 37,
+      "total_tokens": 1813,
+      "cost": 0.00060125,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00060125,
+       "upstream_inference_prompt_cost": 0.00056832,
+       "upstream_inference_completions_cost": 3.293e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "cd1cf2f94b54",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"family_id\": \"F03.1\", \"confidence\": \"high\", \"explanation\": \"Кросс-промо со смежным бизнесом\"}"
+    }
+   ]
+  },
+  {
+   "set": "bakery",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Ввести систему предзаказов: клиенты могут заказывать хлеб заранее через приложение или сайт, чтобы пекарня знала точное количество для выпечки.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидки на хлеб во второй половине дня, чтобы стимулировать вечерние продажи.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создать комбо-предложения: кофе + хлеб со скидкой, чтобы привлечь утренних клиентов к покупке хлеба.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить программу лояльности: например, за каждые 5 купленных буханок хлеба – шестая бесплатно.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать вечерние акции: например, 'Хлеб в подарок' при покупке определённого количества других товаров.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Партнёрство с местными кафе и ресторанами: предложить им покупать оставшийся хлеб со скидкой для своих нужд.",
+     "family": "F03",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 6.56,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 6.52,
+     "usage": {
+      "prompt_tokens": 83,
+      "completion_tokens": 237,
+      "total_tokens": 320,
+      "cost": 0.0002651661,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002651661,
+       "upstream_inference_prompt_cost": 2.13642e-05,
+       "upstream_inference_completions_cost": 0.0002438019
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "166f5cde9058",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Ввести систему предзаказов: клиенты могут заказывать хлеб заранее через приложение или сайт, чтобы пекарня знала точное количество для выпечки.\",\n    \"Предложить скидки на хлеб во второй половине дня, чтобы стимулировать вечерние продажи.\",\n    \"Создать комбо-предложения: кофе + хлеб со скидкой, чтобы привлечь утренних клиентов к покупке хлеба.\",\n    \"Запустить программу лояльности: например, за каждые 5 купленных буханок хлеба – шестая бесплатно.\",\n    \"Организовать вечерние акции: например, 'Хлеб в подарок' при покупке определённого количества других товаров.\",\n    \"Партнёрство с местными кафе и ресторанами: предложить им покупать оставшийся хлеб со скидкой для своих нужд.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "bakery",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Введение системы предзаказов на хлеб через мобильное приложение или сайт, чтобы точно знать, сколько продукции нужно испечь.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложение скидок на хлеб за час до закрытия, чтобы стимулировать вечерние продажи.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Организация совместных акций с местными кафе и ресторанами, чтобы они закупали хлеб для своих нужд.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Введение программы лояльности, где покупатели получают бесплатный хлеб после определенного количества покупок.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Расширение ассортимента вечерних продуктов, таких как бутерброды или пирожки, чтобы привлечь больше клиентов.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Проведение мастер-классов по выпечке или дегустаций свежего хлеба вечером, чтобы создать дополнительный поток клиентов.",
+     "family": "F12",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 12.9,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 12.86,
+     "usage": {
+      "prompt_tokens": 82,
+      "completion_tokens": 205,
+      "total_tokens": 287,
+      "cost": 0.00020869,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00020869,
+       "upstream_inference_prompt_cost": 2.624e-05,
+       "upstream_inference_completions_cost": 0.00018245
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "166f5cde9058",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\n    \"Введение системы предзаказов на хлеб через мобильное приложение или сайт, чтобы точно знать, сколько продукции нужно испечь.\",\n    \"Предложение скидок на хлеб за час до закрытия, чтобы стимулировать вечерние продажи.\",\n    \"Организация совместных акций с местными кафе и ресторанами, чтобы они закупали хлеб для своих нужд.\",\n    \"Введение программы лояльности, где покупатели получают бесплатный хлеб после определенного количества покупок.\",\n    \"Расширение ассортимента вечерних продуктов, таких как бутерброды или пирожки, чтобы привлечь больше клиентов.\",\n    \"Проведение мастер-классов по выпечке или дегустаций свежего хлеба вечером, чтобы создать дополнительный поток клиентов.\"\n]}"
+    }
+   ]
+  },
+  {
+   "set": "tutor",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать профиль в Instagram/TikTok с полезным контентом по подготовке к ОГЭ (разбор задач, лайфхаки, мотивация)",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления в местных группах и чатах родителей/школьников в VK и Telegram",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатный пробный урок для привлечения новых учеников (можно ограничить по времени)",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать мини-группы (2-3 человека) с небольшой скидкой — так ученикам комфортнее, а тебе выгоднее",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать со школами: предложить вести факультативы или разовые мастер-классы по подготовке к ОГЭ",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить реферальную программу: скидка текущим ученикам за приведённого друга",
+     "family": "F04",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 7.06,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 7.03,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 203,
+      "total_tokens": 282,
+      "cost": 0.0002291607,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002291607,
+       "upstream_inference_prompt_cost": 2.03346e-05,
+       "upstream_inference_completions_cost": 0.0002088261
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "90e2448aa79d",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать профиль в Instagram/TikTok с полезным контентом по подготовке к ОГЭ (разбор задач, лайфхаки, мотивация)\",\n    \"Разместить объявления в местных группах и чатах родителей/школьников в VK и Telegram\",\n    \"Предложить бесплатный пробный урок для привлечения новых учеников (можно ограничить по времени)\",\n    \"Организовать мини-группы (2-3 человека) с небольшой скидкой — так ученикам комфортнее, а тебе выгоднее\",\n    \"Сотрудничать со школами: предложить вести факультативы или разовые мастер-классы по подготовке к ОГЭ\",\n    \"Запустить реферальную программу: скидка текущим ученикам за приведённого друга\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "tutor",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать бесплатный мастер-класс или вебинар по решению сложных задач ОГЭ с приглашением школьников через социальные сети и местные группы.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления на школьных форумах и в группах родителей в социальных сетях, таких как ВКонтакте и Facebook.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидку или бонус за рекомендацию (например, скидка на следующий месяц, если ученик приведет друга).",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными школами или учителями для распространения информации о своих услугах.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Создать короткие полезные видео с советами по подготовке к ОГЭ и выкладывать их на YouTube и TikTok, привлекая внимание школьников.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать пробное бесплатное занятие для потенциальных учеников, чтобы они могли оценить качество подготовки.",
+     "family": "F06",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 12.05,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.97,
+     "usage": {
+      "prompt_tokens": 78,
+      "completion_tokens": 198,
+      "total_tokens": 276,
+      "cost": 0.00020118,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00020118,
+       "upstream_inference_prompt_cost": 2.496e-05,
+       "upstream_inference_completions_cost": 0.00017622
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "90e2448aa79d",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\"Создать бесплатный мастер-класс или вебинар по решению сложных задач ОГЭ с приглашением школьников через социальные сети и местные группы.\", \"Разместить объявления на школьных форумах и в группах родителей в социальных сетях, таких как ВКонтакте и Facebook.\", \"Предложить скидку или бонус за рекомендацию (например, скидка на следующий месяц, если ученик приведет друга).\", \"Сотрудничать с местными школами или учителями для распространения информации о своих услугах.\", \"Создать короткие полезные видео с советами по подготовке к ОГЭ и выкладывать их на YouTube и TikTok, привлекая внимание школьников.\", \"Организовать пробное бесплатное занятие для потенциальных учеников, чтобы они могли оценить качество подготовки.\"]}"
+    }
+   ]
+  },
+  {
+   "set": "tutor",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Разместить объявления в школьных группах и пабликах в социальных сетях (ВКонтакте, Telegram), где активны родители и сами ученики.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатный пробный урок или диагностику знаний, чтобы заинтересовать потенциальных клиентов.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать простой лендинг или страницу в Instagram с отзывами учеников, примерами успешной подготовки и контактами.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Договориться с местными школами о размещении информации на досках объявлений или рекомендации вас как репетитора.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать сарафанное радио: предложить скидку текущим ученикам за приведение друзей.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Попробовать таргетированную рекламу в соцсетях, направленную на родителей и учеников 9 класса в вашем городе.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 6.84,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 6.81,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 214,
+      "total_tokens": 293,
+      "cost": 0.0002404764,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002404764,
+       "upstream_inference_prompt_cost": 2.03346e-05,
+       "upstream_inference_completions_cost": 0.0002201418
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "90e2448aa79d",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Разместить объявления в школьных группах и пабликах в социальных сетях (ВКонтакте, Telegram), где активны родители и сами ученики.\",\n    \"Предложить бесплатный пробный урок или диагностику знаний, чтобы заинтересовать потенциальных клиентов.\",\n    \"Создать простой лендинг или страницу в Instagram с отзывами учеников, примерами успешной подготовки и контактами.\",\n    \"Договориться с местными школами о размещении информации на досках объявлений или рекомендации вас как репетитора.\",\n    \"Использовать сарафанное радио: предложить скидку текущим ученикам за приведение друзей.\",\n    \"Попробовать таргетированную рекламу в соцсетях, направленную на родителей и учеников 9 класса в вашем городе.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "tutor",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Разместить объявления в местных группах школ в социальных сетях (ВКонтакте, Facebook, Telegram).",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатный пробный урок для привлечения интереса.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать страницу в Instagram с полезными материалами и разборами задач, привлекая аудиторию через хэштеги.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления на досках объявлений в школах (если разрешено).",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Вести блог на YouTube с разбором сложных задач, привлекая учеников через поиск.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с родительскими чатами и сообществами, предлагая скидки за рекомендации.",
+     "family": "F02",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 5.54,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 5.51,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 172,
+      "total_tokens": 251,
+      "cost": 0.000197271,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 64,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.000197271,
+       "upstream_inference_prompt_cost": 2.03346e-05,
+       "upstream_inference_completions_cost": 0.0001769364
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "90e2448aa79d",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Разместить объявления в местных группах школ в социальных сетях (ВКонтакте, Facebook, Telegram).\",\n    \"Предложить бесплатный пробный урок для привлечения интереса.\",\n    \"Создать страницу в Instagram с полезными материалами и разборами задач, привлекая аудиторию через хэштеги.\",\n    \"Разместить объявления на досках объявлений в школах (если разрешено).\",\n    \"Вести блог на YouTube с разбором сложных задач, привлекая учеников через поиск.\",\n    \"Сотрудничать с родительскими чатами и сообществами, предлагая скидки за рекомендации.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "tutor",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Размести объявления в группах ВКонтакте и Телеграме, посвящённых подготовке к ЕГЭ и ОГЭ, с акцентом на индивидуальный подход и высокие результаты.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Создай бесплатный вебинар или мастер-класс по решению сложных задач ОГЭ по математике, чтобы привлечь внимание и показать свою экспертность.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Предложи скидку или бонус (например, бесплатное первое занятие) для первых 5 учеников, которые запишутся до октября.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Используй сарафанное радио: попроси текущих или бывших учеников порекомендовать тебя своим друзьям, возможно, за небольшую благодарность.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Размести отзывы от прошлых учеников с их результатами ОГЭ в соцсетях и на Авито, чтобы повысить доверие.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Создай таргетированную рекламу в соцсетях (ВКонтакте, Instagram) для родителей учеников 9 класса в твоём городе с призывом к действию.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 8.05,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 8.01,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 274,
+      "total_tokens": 353,
+      "cost": 0.0003021984,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 64,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0003021984,
+       "upstream_inference_prompt_cost": 2.03346e-05,
+       "upstream_inference_completions_cost": 0.0002818638
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "90e2448aa79d",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Размести объявления в группах ВКонтакте и Телеграме, посвящённых подготовке к ЕГЭ и ОГЭ, с акцентом на индивидуальный подход и высокие результаты.\",\n    \"Создай бесплатный вебинар или мастер-класс по решению сложных задач ОГЭ по математике, чтобы привлечь внимание и показать свою экспертность.\",\n    \"Предложи скидку или бонус (например, бесплатное первое занятие) для первых 5 учеников, которые запишутся до октября.\",\n    \"Используй сарафанное радио: попроси текущих или бывших учеников порекомендовать тебя своим друзьям, возможно, за небольшую благодарность.\",\n    \"Размести отзывы от прошлых учеников с их результатами ОГЭ в соцсетях и на Авито, чтобы повысить доверие.\",\n    \"Создай таргетированную рекламу в соцсетях (ВКонтакте, Instagram) для родителей учеников 9 класса в твоём городе с призывом к действию.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "tutor",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать страницу в Instagram или ВКонтакте с полезным контентом по подготовке к ОГЭ, разбирать сложные задачи и привлекать подписчиков через рекламу.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления в местных группах родителей и школьников в соцсетях (Facebook, ВКонтакте), предлагая бесплатный пробный урок.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать вебинар или онлайн-встречу на тему 'Как сдать ОГЭ по математике на 5' с возможностью записи на платные занятия после.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Попросить текущих учеников или их родителей порекомендовать вас знакомым, предложив скидку за приведённого друга.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления на специализированных сайтах для репетиторов (например, Profi.ru, Репетитор.ру) с отзывами и детальным описанием методики.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать со школами, предложив провести бесплатный мастер-класс или пробный урок для 9-х классов с последующей записью на курс.",
+     "family": "F12",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 9.51,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 9.46,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 262,
+      "total_tokens": 341,
+      "cost": 0.000289854,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 64,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.000289854,
+       "upstream_inference_prompt_cost": 2.03346e-05,
+       "upstream_inference_completions_cost": 0.0002695194
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "90e2448aa79d",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать страницу в Instagram или ВКонтакте с полезным контентом по подготовке к ОГЭ, разбирать сложные задачи и привлекать подписчиков через рекламу.\",\n    \"Разместить объявления в местных группах родителей и школьников в соцсетях (Facebook, ВКонтакте), предлагая бесплатный пробный урок.\",\n    \"Организовать вебинар или онлайн-встречу на тему 'Как сдать ОГЭ по математике на 5' с возможностью записи на платные занятия после.\",\n    \"Попросить текущих учеников или их родителей порекомендовать вас знакомым, предложив скидку за приведённого друга.\",\n    \"Разместить объявления на специализированных сайтах для репетиторов (например, Profi.ru, Репетитор.ру) с отзывами и детальным описанием методики.\",\n    \"Сотрудничать со школами, предложив провести бесплатный мастер-класс или пробный урок для 9-х классов с последующей записью на курс.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "repair",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать группу в местных соцсетях с отзывами клиентов и акциями (например, бесплатная диагностика при первом обращении).",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Раздать визитки с QR-кодом на группу/чат в ближайших магазинах бытовой техники и ЖЭУ.",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидку 10-15% за рекомендацию, если новый клиент назовёт имя того, кто его направил.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать «горячую линию» по простым поломкам (например, в WhatsApp) с бесплатными советами — это привлечёт доверие.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить акцию «День открытых дверей»: показательный ремонт одной машины в режиме онлайн (стрим/сторис) с пояснениями.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Договориться с местными СМИ о небольшом интервью или заметке «Как продлить жизнь стиральной машине» с упоминанием услуг.",
+     "family": "F02",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 9.09,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 9.06,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 242,
+      "total_tokens": 322,
+      "cost": 0.0002695374,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002695374,
+       "upstream_inference_prompt_cost": 2.0592e-05,
+       "upstream_inference_completions_cost": 0.0002489454
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "c4765939743c",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать группу в местных соцсетях с отзывами клиентов и акциями (например, бесплатная диагностика при первом обращении).\",\n    \"Раздать визитки с QR-кодом на группу/чат в ближайших магазинах бытовой техники и ЖЭУ.\",\n    \"Предложить скидку 10-15% за рекомендацию, если новый клиент назовёт имя того, кто его направил.\",\n    \"Организовать «горячую линию» по простым поломкам (например, в WhatsApp) с бесплатными советами — это привлечёт доверие.\",\n    \"Запустить акцию «День открытых дверей»: показательный ремонт одной машины в режиме онлайн (стрим/сторис) с пояснениями.\",\n    \"Договориться с местными СМИ о небольшом интервью или заметке «Как продлить жизнь стиральной машине» с упоминанием услуг.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "repair",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать группу в местных социальных сетях (ВКонтакте, Telegram, Одноклассники) с отзывами клиентов и акциями (например, 'Приведи друга – получи скидку 10%').",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Раздавать визитки с QR-кодом на страницу с отзывами и контактами в местах, где часто ломаются стиральные машины (магазины бытовой техники, прачечные).",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатную диагностику при первом обращении, чтобы привлечь новых клиентов.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными магазинами бытовой техники: они могут рекомендовать мастера при продаже стиральных машин.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить акцию 'Летний ремонт': скидка 15% на все услуги в июле и августе.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления на местных досках объявлений (Авито, Юла) с примерами работ и реальными отзывами.",
+     "family": "F11",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 8.19,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 8.15,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 253,
+      "total_tokens": 333,
+      "cost": 0.0002808531,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002808531,
+       "upstream_inference_prompt_cost": 2.0592e-05,
+       "upstream_inference_completions_cost": 0.0002602611
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "c4765939743c",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать группу в местных социальных сетях (ВКонтакте, Telegram, Одноклассники) с отзывами клиентов и акциями (например, 'Приведи друга – получи скидку 10%').\",\n    \"Раздавать визитки с QR-кодом на страницу с отзывами и контактами в местах, где часто ломаются стиральные машины (магазины бытовой техники, прачечные).\",\n    \"Предложить бесплатную диагностику при первом обращении, чтобы привлечь новых клиентов.\",\n    \"Сотрудничать с местными магазинами бытовой техники: они могут рекомендовать мастера при продаже стиральных машин.\",\n    \"Запустить акцию 'Летний ремонт': скидка 15% на все услуги в июле и августе.\",\n    \"Разместить объявления на местных досках объявлений (Авито, Юла) с примерами работ и реальными отзывами.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "repair",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать простой сайт или страницу в соцсетях с описанием услуг и контактами, чтобы клиенты могли легко найти мастера.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить скидку или бонус за рекомендацию новым клиентам, стимулируя сарафанное радио.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления в местных газетах и на досках объявлений в магазинах бытовой техники.",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Провести акцию 'бесплатная диагностика' для привлечения новых клиентов с последующим предложением ремонта.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Создать визитки и раздавать их клиентам и в местах, где могут быть потенциальные клиенты (магазины техники, ЖЭКи).",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать партнерство с магазинами бытовой техники, предлагая свои услуги их клиентам за процент от заказа.",
+     "family": "F03",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 7.77,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 7.74,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 227,
+      "total_tokens": 307,
+      "cost": 0.0002541069,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002541069,
+       "upstream_inference_prompt_cost": 2.0592e-05,
+       "upstream_inference_completions_cost": 0.0002335149
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "c4765939743c",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать простой сайт или страницу в соцсетях с описанием услуг и контактами, чтобы клиенты могли легко найти мастера.\",\n    \"Предложить скидку или бонус за рекомендацию новым клиентам, стимулируя сарафанное радио.\",\n    \"Разместить объявления в местных газетах и на досках объявлений в магазинах бытовой техники.\",\n    \"Провести акцию 'бесплатная диагностика' для привлечения новых клиентов с последующим предложением ремонта.\",\n    \"Создать визитки и раздавать их клиентам и в местах, где могут быть потенциальные клиенты (магазины техники, ЖЭКи).\",\n    \"Организовать партнерство с магазинами бытовой техники, предлагая свои услуги их клиентам за процент от заказа.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "repair",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать акцию 'Приведи друга': клиенты получают скидку за рекомендацию ваших услуг.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления на местных форумах и в группах в социальных сетях.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатную диагностику стиральных машин для первых 10 новых клиентов.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с магазинами бытовой техники: предлагать свои услуги их клиентам.",
+     "family": "F03",
+     "source": "llm"
+    },
+    {
+     "text": "Запустить рекламную кампанию с отзывами довольных клиентов.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать мастер-класс по базовому уходу за стиральными машинами для жителей города.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 14.39,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.79,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 151,
+      "total_tokens": 230,
+      "cost": 0.00015967,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00015967,
+       "upstream_inference_prompt_cost": 2.528e-05,
+       "upstream_inference_completions_cost": 0.00013439
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "c4765939743c",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "{\"ideas\": [\"Создать акцию 'Приведи друга': клиенты получают скидку за рекомендацию ваших услуг.\", \"Разместить объявления на местных форумах и в группах в социальных сетях.\", \"Предложить бесплатную диагностику стиральных машин для первых 10 новых клиентов.\", \"Сотрудничать с магазинами бытовой техники: предлагать свои услуги их клиентам.\", \"Запустить рекламную кампанию с отзывами довольных клиентов.\", \"Организовать мастер-класс по базовому уходу за стиральными машинами для жителей города.\"]}"
+    },
+    {
+     "role": "классификатор (Р1)",
+     "seconds": 2.57,
+     "usage": {
+      "prompt_tokens": 1766,
+      "completion_tokens": 47,
+      "total_tokens": 1813,
+      "cost": 0.0005029173,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 1664,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0005029173,
+       "upstream_inference_prompt_cost": 0.0004545684,
+       "upstream_inference_completions_cost": 4.83489e-05
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0,
+     "max_tokens": 150,
+     "prompt_sha1": "b8560fda6897",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"family_id\": \"F03.1\",\n  \"confidence\": \"high\",\n  \"explanation\": \"Кросс-промо со смежным бизнесом\"\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "repair",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать профили в социальных сетях и публиковать отзывы клиентов с фотографиями до/после ремонта.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатную диагностику стиральных машин для новых клиентов.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить акцию «Приведи друга»: скидка 10% за рекомендацию.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать бесплатные мастер-классы по базовому уходу за стиральными машинами.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить рекламу в местных группах и чатах (WhatsApp, Telegram, Viber).",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с магазинами бытовой техники для получения рекомендаций от продавцов.",
+     "family": "F04",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 7.81,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 7.78,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 159,
+      "total_tokens": 238,
+      "cost": 0.00016679,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00016679,
+       "upstream_inference_prompt_cost": 2.528e-05,
+       "upstream_inference_completions_cost": 0.00014151
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "c4765939743c",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\"Создать профили в социальных сетях и публиковать отзывы клиентов с фотографиями до/после ремонта.\", \"Предложить бесплатную диагностику стиральных машин для новых клиентов.\", \"Запустить акцию «Приведи друга»: скидка 10% за рекомендацию.\", \"Организовать бесплатные мастер-классы по базовому уходу за стиральными машинами.\", \"Разместить рекламу в местных группах и чатах (WhatsApp, Telegram, Viber).\", \"Сотрудничать с магазинами бытовой техники для получения рекомендаций от продавцов.\"]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "repair",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать группу в местных соцсетях (ВКонтакте, Одноклассники) с отзывами клиентов и акциями (например, 'Приведи друга — получи скидку 10%').",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить объявления на досках объявлений у подъездов и в магазинах бытовой техники с QR-кодом на WhatsApp для быстрой связи.",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Завести YouTube-канал с простыми советами по уходу за стиральными машинами (это привлечёт внимание и покажет экспертность).",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Договориться с местными магазинами бытовой техники о взаимовыгодном сотрудничестве (например, скидка клиентам магазина на первый ремонт).",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить услугу 'Диагностика за 1 рубль' (клиент платит символическую сумму, а мастер на месте оценивает проблему и предлагает решение).",
+     "family": "F08",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать 'горячую линию' по телефону с коротким номером или запоминающимся словом (например, *СТИРАЛКА* для быстрого набора).",
+     "family": "F04",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 8.9,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 8.86,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 288,
+      "total_tokens": 368,
+      "cost": 0.0003168576,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 64,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0003168576,
+       "upstream_inference_prompt_cost": 2.0592e-05,
+       "upstream_inference_completions_cost": 0.0002962656
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "c4765939743c",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать группу в местных соцсетях (ВКонтакте, Одноклассники) с отзывами клиентов и акциями (например, 'Приведи друга — получи скидку 10%').\",\n    \"Разместить объявления на досках объявлений у подъездов и в магазинах бытовой техники с QR-кодом на WhatsApp для быстрой связи.\",\n    \"Завести YouTube-канал с простыми советами по уходу за стиральными машинами (это привлечёт внимание и покажет экспертность).\",\n    \"Договориться с местными магазинами бытовой техники о взаимовыгодном сотрудничестве (например, скидка клиентам магазина на первый ремонт).\",\n    \"Запустить услугу 'Диагностика за 1 рубль' (клиент платит символическую сумму, а мастер на месте оценивает проблему и предлагает решение).\",\n    \"Организовать 'горячую линию' по телефону с коротким номером или запоминающимся словом (например, *СТИРАЛКА* для быстрого набора).\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "designer",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать портфолио с примерами работ и разместить его на бесплатных платформах (Behance, Dribbble).",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить услуги по сниженной цене или бесплатно для первых клиентов в обмен на отзывы и рекомендации.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Активно участвовать в группах и форумах для предпринимателей, предлагая свои услуги.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать сарафанное радио, прося друзей и знакомых рекомендовать свои услуги.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Создать простой сайт-визитку с описанием услуг и контактной информацией.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Провести бесплатные консультации для потенциальных клиентов, чтобы продемонстрировать свою экспертизу.",
+     "family": "F06",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 8.04,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 8.01,
+     "usage": {
+      "prompt_tokens": 75,
+      "completion_tokens": 178,
+      "total_tokens": 253,
+      "cost": 0.00018242,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00018242,
+       "upstream_inference_prompt_cost": 2.4e-05,
+       "upstream_inference_completions_cost": 0.00015842
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "01aacb3a7748",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\"Создать портфолио с примерами работ и разместить его на бесплатных платформах (Behance, Dribbble).\", \"Предложить услуги по сниженной цене или бесплатно для первых клиентов в обмен на отзывы и рекомендации.\", \"Активно участвовать в группах и форумах для предпринимателей, предлагая свои услуги.\", \"Использовать сарафанное радио, прося друзей и знакомых рекомендовать свои услуги.\", \"Создать простой сайт-визитку с описанием услуг и контактной информацией.\", \"Провести бесплатные консультации для потенциальных клиентов, чтобы продемонстрировать свою экспертизу.\"]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "designer",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать портфолио на бесплатных платформах (Behance, Dribbble) и активно делиться работами в соцсетях.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить услуги по веб-дизайну на фриланс-платформах (Upwork, Freelance.ru) с конкурентными ценами.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Провести бесплатные консультации для потенциальных клиентов, чтобы показать экспертность и завоевать доверие.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными малыми бизнесами, предлагая им улучшить их сайты или создать новые.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать сарафанное радио: попросить друзей и знакомых рекомендовать услуги своим контактам.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Создать простой лендинг с предложением акции «Первый проект со скидкой 30%» и продвигать его через соцсети.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.33,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.27,
+     "usage": {
+      "prompt_tokens": 75,
+      "completion_tokens": 223,
+      "total_tokens": 298,
+      "cost": 0.00022247,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00022247,
+       "upstream_inference_prompt_cost": 2.4e-05,
+       "upstream_inference_completions_cost": 0.00019847
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "01aacb3a7748",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n  \"Создать портфолио на бесплатных платформах (Behance, Dribbble) и активно делиться работами в соцсетях.\",\n  \"Предложить услуги по веб-дизайну на фриланс-платформах (Upwork, Freelance.ru) с конкурентными ценами.\",\n  \"Провести бесплатные консультации для потенциальных клиентов, чтобы показать экспертность и завоевать доверие.\",\n  \"Сотрудничать с местными малыми бизнесами, предлагая им улучшить их сайты или создать новые.\",\n  \"Использовать сарафанное радио: попросить друзей и знакомых рекомендовать услуги своим контактам.\",\n  \"Создать простой лендинг с предложением акции «Первый проект со скидкой 30%» и продвигать его через соцсети.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "designer",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать портфолио на Behance или Dribbble и активно участвовать в тематических группах и форумах, чтобы привлечь внимание потенциальных клиентов.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатный дизайн для местного бизнеса или НКО в обмен на рекомендации и возможность использовать работу в портфолио.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети для продвижения своих услуг, публикуя примеры работ, советы по дизайну и участвуя в конкурсах.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Наладить сотрудничество с другими фрилансерами (например, веб-разработчиками или копирайтерами) для взаимного обмена клиентами.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Создать простой лендинг с предложением своих услуг и оптимизировать его под SEO, чтобы привлекать органический трафик.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить специальные условия для первых клиентов, например, скидку или дополнительные услуги, чтобы стимулировать их к заказу.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.76,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.7,
+     "usage": {
+      "prompt_tokens": 75,
+      "completion_tokens": 239,
+      "total_tokens": 314,
+      "cost": 0.00023671,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00023671,
+       "upstream_inference_prompt_cost": 2.4e-05,
+       "upstream_inference_completions_cost": 0.00021271
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "01aacb3a7748",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Создать портфолио на Behance или Dribbble и активно участвовать в тематических группах и форумах, чтобы привлечь внимание потенциальных клиентов.\",\n    \"Предложить бесплатный дизайн для местного бизнеса или НКО в обмен на рекомендации и возможность использовать работу в портфолио.\",\n    \"Использовать социальные сети для продвижения своих услуг, публикуя примеры работ, советы по дизайну и участвуя в конкурсах.\",\n    \"Наладить сотрудничество с другими фрилансерами (например, веб-разработчиками или копирайтерами) для взаимного обмена клиентами.\",\n    \"Создать простой лендинг с предложением своих услуг и оптимизировать его под SEO, чтобы привлекать органический трафик.\",\n    \"Предложить специальные условия для первых клиентов, например, скидку или дополнительные услуги, чтобы стимулировать их к заказу.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "designer",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создайте портфолио на бесплатных платформах (Behance, Dribbble) и активно делитесь работами в соцсетях.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложите бесплатный дизайн макета для местных малого бизнеса в обмен на рекомендации.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Участвуйте в онлайн-конкурсах дизайна для повышения видимости и получения опыта.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Напишите личные письма владельцам малого бизнеса с предложением услуг по обновлению сайтов.",
+     "family": "F05",
+     "source": "dict"
+    },
+    {
+     "text": "Создайте шаблонные решения для популярных CMS (WordPress, Wix) и продавайте их на маркетплейсах.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Организуйте вебинар или мастер-класс по основам веб-дизайна для привлечения потенциальных клиентов.",
+     "family": "F12",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 6.26,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 6.23,
+     "usage": {
+      "prompt_tokens": 76,
+      "completion_tokens": 210,
+      "total_tokens": 286,
+      "cost": 0.0002355894,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002355894,
+       "upstream_inference_prompt_cost": 1.95624e-05,
+       "upstream_inference_completions_cost": 0.000216027
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "01aacb3a7748",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создайте портфолио на бесплатных платформах (Behance, Dribbble) и активно делитесь работами в соцсетях.\",\n    \"Предложите бесплатный дизайн макета для местных малого бизнеса в обмен на рекомендации.\",\n    \"Участвуйте в онлайн-конкурсах дизайна для повышения видимости и получения опыта.\",\n    \"Напишите личные письма владельцам малого бизнеса с предложением услуг по обновлению сайтов.\",\n    \"Создайте шаблонные решения для популярных CMS (WordPress, Wix) и продавайте их на маркетплейсах.\",\n    \"Организуйте вебинар или мастер-класс по основам веб-дизайна для привлечения потенциальных клиентов.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "designer",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать портфолио на Behance, Dribbble и других платформах, активно участвовать в сообществах, чтобы привлечь внимание потенциальных клиентов.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить бесплатный или льготный дизайн для местных бизнесов или стартапов в обмен на рекомендации и отзывы.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Провести бесплатный вебинар или мастер-класс по основам веб-дизайна, чтобы заявить о себе как о эксперте и привлечь клиентов.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Создать шаблоны для популярных CMS (например, WordPress) и продавать их на платформах вроде ThemeForest или Creative Market.",
+     "family": "F06",
+     "source": "dict"
+    },
+    {
+     "text": "Начать вести блог или канал в социальных сетях с советами по веб-дизайну, чтобы привлечь аудиторию и повысить доверие.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Обратиться к друзьям, знакомым и бывшим коллегам с предложением услуг, попросить их распространить информацию о вас.",
+     "family": "F05",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 10.97,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 10.92,
+     "usage": {
+      "prompt_tokens": 75,
+      "completion_tokens": 252,
+      "total_tokens": 327,
+      "cost": 0.00024828,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00024828,
+       "upstream_inference_prompt_cost": 2.4e-05,
+       "upstream_inference_completions_cost": 0.00022428
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "01aacb3a7748",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Создать портфолио на Behance, Dribbble и других платформах, активно участвовать в сообществах, чтобы привлечь внимание потенциальных клиентов.\",\n    \"Предложить бесплатный или льготный дизайн для местных бизнесов или стартапов в обмен на рекомендации и отзывы.\",\n    \"Провести бесплатный вебинар или мастер-класс по основам веб-дизайна, чтобы заявить о себе как о эксперте и привлечь клиентов.\",\n    \"Создать шаблоны для популярных CMS (например, WordPress) и продавать их на платформах вроде ThemeForest или Creative Market.\",\n    \"Начать вести блог или канал в социальных сетях с советами по веб-дизайну, чтобы привлечь аудиторию и повысить доверие.\",\n    \"Обратиться к друзьям, знакомым и бывшим коллегам с предложением услуг, попросить их распространить информацию о вас.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "designer",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать портфолио с примерами работ и предлагать бесплатные мини-проекты для первых клиентов, чтобы получить отзывы и рекомендации.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Активно участвовать в тематических сообществах и форумах, предлагая советы и помощь, чтобы привлечь внимание потенциальных клиентов.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Сотрудничать с местными малыми бизнесами, предлагая им доступные цены на создание или улучшение их сайтов.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети для продвижения своих услуг, публикуя полезный контент и примеры работ.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать вебинар или мастер-класс по веб-дизайну, чтобы продемонстрировать свои навыки и привлечь клиентов.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Предложить услуги по редизайну старых сайтов или оптимизации существующих, акцентируя внимание на улучшении их функциональности и внешнего вида.",
+     "family": "F10",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 9.9,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 9.86,
+     "usage": {
+      "prompt_tokens": 75,
+      "completion_tokens": 234,
+      "total_tokens": 309,
+      "cost": 0.00023226,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00023226,
+       "upstream_inference_prompt_cost": 2.4e-05,
+       "upstream_inference_completions_cost": 0.00020826
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "01aacb3a7748",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать портфолио с примерами работ и предлагать бесплатные мини-проекты для первых клиентов, чтобы получить отзывы и рекомендации.\",\n    \"Активно участвовать в тематических сообществах и форумах, предлагая советы и помощь, чтобы привлечь внимание потенциальных клиентов.\",\n    \"Сотрудничать с местными малыми бизнесами, предлагая им доступные цены на создание или улучшение их сайтов.\",\n    \"Использовать социальные сети для продвижения своих услуг, публикуя полезный контент и примеры работ.\",\n    \"Организовать вебинар или мастер-класс по веб-дизайну, чтобы продемонстрировать свои навыки и привлечь клиентов.\",\n    \"Предложить услуги по редизайну старых сайтов или оптимизации существующих, акцентируя внимание на улучшении их функциональности и внешнего вида.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "app",
+   "k": 0,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Организовать партнерство с блогерами и инфлюенсерами, которые специализируются на личных финансах, предлагая им бесплатное использование приложения в обмен на честные обзоры.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Создать реферальную программу, где пользователи получают бонусы или доступ к премиальным функциям за привлечение друзей.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Провести серию вебинаров или мастер-классов по управлению личными финансами, используя приложение как основной инструмент.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить статьи или гостевые посты на популярных финансовых сайтах и форумах, рассказывая о преимуществах приложения.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать социальные сети для запуска вирусной кампании с интересными финансовыми челленджами или конкурсами, где приложение выступает ключевым инструментом.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Обратиться в местные сообщества и группы, такие как университеты, коворкинги или бизнес-клубы, предлагая бесплатные презентации и демонстрации приложения.",
+     "family": "F02",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.98,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.93,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 261,
+      "total_tokens": 340,
+      "cost": 0.00025757,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00025757,
+       "upstream_inference_prompt_cost": 2.528e-05,
+       "upstream_inference_completions_cost": 0.00023229
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "5c4163c44cfb",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Организовать партнерство с блогерами и инфлюенсерами, которые специализируются на личных финансах, предлагая им бесплатное использование приложения в обмен на честные обзоры.\",\n    \"Создать реферальную программу, где пользователи получают бонусы или доступ к премиальным функциям за привлечение друзей.\",\n    \"Провести серию вебинаров или мастер-классов по управлению личными финансами, используя приложение как основной инструмент.\",\n    \"Разместить статьи или гостевые посты на популярных финансовых сайтах и форумах, рассказывая о преимуществах приложения.\",\n    \"Использовать социальные сети для запуска вирусной кампании с интересными финансовыми челленджами или конкурсами, где приложение выступает ключевым инструментом.\",\n    \"Обратиться в местные сообщества и группы, такие как университеты, коворкинги или бизнес-клубы, предлагая бесплатные презентации и демонстрации приложения.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "app",
+   "k": 1,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Использовать социальные сети: Создать аккаунты приложения в популярных соцсетях и регулярно публиковать полезный контент о финансах и управлении бюджетом, чтобы привлечь внимание.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Партнёрство с блогерами: Найти блогеров в теме финансов и предложить им рассказать о приложении в обмен на бесплатное использование или другие бонусы.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Сарафанное радио: Создать реферальную программу, где пользователи получают бонусы за привлечение друзей.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Участие в форумах и группах: Активно участвовать в онлайн-сообществах, связанных с финансами, и делиться советами, упоминая приложение.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Бесплатные мастер-классы: Провести онлайн-вебинары или мастер-классы по управлению бюджетом, где приложение будет представлено как инструмент для учёта расходов.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Оптимизация SEO: Улучшить описание приложения в магазинах приложений, используя ключевые слова, чтобы его легче находили через поиск.",
+     "family": "F10",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 12.89,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 12.78,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 276,
+      "total_tokens": 355,
+      "cost": 0.00027092,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00027092,
+       "upstream_inference_prompt_cost": 2.528e-05,
+       "upstream_inference_completions_cost": 0.00024564
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "5c4163c44cfb",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Использовать социальные сети: Создать аккаунты приложения в популярных соцсетях и регулярно публиковать полезный контент о финансах и управлении бюджетом, чтобы привлечь внимание.\",\n    \"Партнёрство с блогерами: Найти блогеров в теме финансов и предложить им рассказать о приложении в обмен на бесплатное использование или другие бонусы.\",\n    \"Сарафанное радио: Создать реферальную программу, где пользователи получают бонусы за привлечение друзей.\",\n    \"Участие в форумах и группах: Активно участвовать в онлайн-сообществах, связанных с финансами, и делиться советами, упоминая приложение.\",\n    \"Бесплатные мастер-классы: Провести онлайн-вебинары или мастер-классы по управлению бюджетом, где приложение будет представлено как инструмент для учёта расходов.\",\n    \"Оптимизация SEO: Улучшить описание приложения в магазинах приложений, используя ключевые слова, чтобы его легче находили через поиск.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "app",
+   "k": 2,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать партнерские отношения с блогерами и инфлюенсерами, предлагая им уникальный контент или эксклюзивные возможности в обмен на упоминание приложения.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить реферальную программу, где пользователи получают бонусы за привлечение друзей (например, дополнительные функции или персонализированные отчеты).",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать конкурсы или челленджи среди пользователей с призами за лучшие советы по экономии или самые креативные способы использования приложения.",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Разместить приложение на платформах для краудмаркетинга, таких как Product Hunt, чтобы привлечь внимание энтузиастов новых технологий.",
+     "family": "F10",
+     "source": "dict"
+    },
+    {
+     "text": "Создать полезный контент (блог, видео, инфографику) о финансовой грамотности и управлении бюджетом, встроив в него упоминания приложения.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Использовать локальные сообщества и форумы (например, группы в соцсетях или местные мероприятия) для бесплатного продвижения через сарафанное радио.",
+     "family": "F02",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 8.33,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 8.24,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 272,
+      "total_tokens": 352,
+      "cost": 0.0003003984,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0003003984,
+       "upstream_inference_prompt_cost": 2.0592e-05,
+       "upstream_inference_completions_cost": 0.0002798064
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "5c4163c44cfb",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Создать партнерские отношения с блогерами и инфлюенсерами, предлагая им уникальный контент или эксклюзивные возможности в обмен на упоминание приложения.\",\n    \"Запустить реферальную программу, где пользователи получают бонусы за привлечение друзей (например, дополнительные функции или персонализированные отчеты).\",\n    \"Организовать конкурсы или челленджи среди пользователей с призами за лучшие советы по экономии или самые креативные способы использования приложения.\",\n    \"Разместить приложение на платформах для краудмаркетинга, таких как Product Hunt, чтобы привлечь внимание энтузиастов новых технологий.\",\n    \"Создать полезный контент (блог, видео, инфографику) о финансовой грамотности и управлении бюджетом, встроив в него упоминания приложения.\",\n    \"Использовать локальные сообщества и форумы (например, группы в соцсетях или местные мероприятия) для бесплатного продвижения через сарафанное радио.\"\n  ]\n}\n```"
+    }
+   ]
+  },
+  {
+   "set": "app",
+   "k": 3,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Организуйте вирусную кампанию через социальные сети, предлагая пользователям делиться своими успехами в экономии с помощью вашего приложения.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Создайте партнерскую программу, где пользователи получают бонусы за привлечение друзей.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Проведите бесплатные вебинары или мастер-классы по управлению домашними финансами, используя ваше приложение как основной инструмент.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Обратитесь к блогерам и инфлюенсерам в сфере финансов с просьбой рассмотреть ваше приложение в своих обзорах.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Разработайте интеграцию с популярными банковскими сервисами для автоматического импорта транзакций.",
+     "family": "F03",
+     "source": "dict"
+    },
+    {
+     "text": "Создайте конкурс с призами для тех пользователей, которые достигнут наибольшей экономии за месяц с помощью вашего приложения.",
+     "family": "F07",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 9.86,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 9.82,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 205,
+      "total_tokens": 284,
+      "cost": 0.00020773,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00020773,
+       "upstream_inference_prompt_cost": 2.528e-05,
+       "upstream_inference_completions_cost": 0.00018245
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "5c4163c44cfb",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\"Организуйте вирусную кампанию через социальные сети, предлагая пользователям делиться своими успехами в экономии с помощью вашего приложения.\", \"Создайте партнерскую программу, где пользователи получают бонусы за привлечение друзей.\", \"Проведите бесплатные вебинары или мастер-классы по управлению домашними финансами, используя ваше приложение как основной инструмент.\", \"Обратитесь к блогерам и инфлюенсерам в сфере финансов с просьбой рассмотреть ваше приложение в своих обзорах.\", \"Разработайте интеграцию с популярными банковскими сервисами для автоматического импорта транзакций.\", \"Создайте конкурс с призами для тех пользователей, которые достигнут наибольшей экономии за месяц с помощью вашего приложения.\"]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "app",
+   "k": 4,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Создать сообщество в социальных сетях (Telegram, ВКонтакте) с регулярным контентом о финансовой грамотности, советами по учёту расходов и вовлечением аудитории.",
+     "family": "F01",
+     "source": "dict"
+    },
+    {
+     "text": "Запустить вирусную кампанию с призывом делиться приложением в обмен на бонусы внутри приложения (например, доступ к дополнительным функциям).",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Организовать партнёрство с блогерами микро- и макроуровня, предлагая им бесплатный доступ к премиальным функциям за обзоры и рекомендации.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Разработать систему реферальных ссылок, где пользователи получают вознаграждение за привлечение друзей.",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Провести онлайн-марафон по финансовой дисциплине с использованием приложения, предлагая призы участникам за активность.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Создать контент-маркетинг в виде статей, видео или подкастов о личных финансах, интегрируя приложение как инструмент для достижения целей.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 11.5,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 11.45,
+     "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 255,
+      "total_tokens": 334,
+      "cost": 0.00025223,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.00025223,
+       "upstream_inference_prompt_cost": 2.528e-05,
+       "upstream_inference_completions_cost": 0.00022695
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "5c4163c44cfb",
+     "provider": "DeepInfra",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\"ideas\": [\n    \"Создать сообщество в социальных сетях (Telegram, ВКонтакте) с регулярным контентом о финансовой грамотности, советами по учёту расходов и вовлечением аудитории.\",\n    \"Запустить вирусную кампанию с призывом делиться приложением в обмен на бонусы внутри приложения (например, доступ к дополнительным функциям).\",\n    \"Организовать партнёрство с блогерами микро- и макроуровня, предлагая им бесплатный доступ к премиальным функциям за обзоры и рекомендации.\",\n    \"Разработать систему реферальных ссылок, где пользователи получают вознаграждение за привлечение друзей.\",\n    \"Провести онлайн-марафон по финансовой дисциплине с использованием приложения, предлагая призы участникам за активность.\",\n    \"Создать контент-маркетинг в виде статей, видео или подкастов о личных финансах, интегрируя приложение как инструмент для достижения целей.\"\n]}\n```"
+    }
+   ]
+  },
+  {
+   "set": "app",
+   "k": 5,
+   "prompt": "v2",
+   "answers": [
+    {
+     "text": "Партнерство с блогерами по личным финансам: предложи им бесплатный доступ к приложению в обмен на обзор или рекомендацию.",
+     "family": "F02",
+     "source": "dict"
+    },
+    {
+     "text": "Проведение вебинаров или онлайн-курсов по управлению финансами с использованием приложения как основного инструмента.",
+     "family": "F12",
+     "source": "dict"
+    },
+    {
+     "text": "Создание реферальной программы: пользователи получают бонусы за привлечение друзей (например, расширенные функции на месяц).",
+     "family": "F04",
+     "source": "dict"
+    },
+    {
+     "text": "Размещение объявлений на бесплатных досках объявлений и форумах, связанных с финансами и экономией.",
+     "family": "F11",
+     "source": "dict"
+    },
+    {
+     "text": "Запуск конкурса с призами для самых активных пользователей (например, за лучший отчет о расходах за месяц).",
+     "family": "F07",
+     "source": "dict"
+    },
+    {
+     "text": "Создание группы в социальных сетях или канала в Telegram с полезным контентом о финансах, где приложение будет основным инструментом для участников.",
+     "family": "F01",
+     "source": "dict"
+    }
+   ],
+   "failed": false,
+   "seconds": 7.29,
+   "calls": [
+    {
+     "role": "ответы чат-бота (Р3)",
+     "seconds": 7.25,
+     "usage": {
+      "prompt_tokens": 80,
+      "completion_tokens": 222,
+      "total_tokens": 302,
+      "cost": 0.0002489634,
+      "is_byok": false,
+      "prompt_tokens_details": {
+       "cached_tokens": 64,
+       "cache_write_tokens": 0,
+       "audio_tokens": 0,
+       "video_tokens": 0
+      },
+      "cost_details": {
+       "upstream_inference_cost": 0.0002489634,
+       "upstream_inference_prompt_cost": 2.0592e-05,
+       "upstream_inference_completions_cost": 0.0002283714
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 0,
+       "image_tokens": 0,
+       "audio_tokens": 0
+      }
+     },
+     "temperature": 0.7,
+     "max_tokens": 600,
+     "prompt_sha1": "5c4163c44cfb",
+     "provider": "StreamLake",
+     "model": "deepseek/deepseek-chat",
+     "attempts": 1,
+     "error": null,
+     "raw": "```json\n{\n  \"ideas\": [\n    \"Партнерство с блогерами по личным финансам: предложи им бесплатный доступ к приложению в обмен на обзор или рекомендацию.\",\n    \"Проведение вебинаров или онлайн-курсов по управлению финансами с использованием приложения как основного инструмента.\",\n    \"Создание реферальной программы: пользователи получают бонусы за привлечение друзей (например, расширенные функции на месяц).\",\n    \"Размещение объявлений на бесплатных досках объявлений и форумах, связанных с финансами и экономией.\",\n    \"Запуск конкурса с призами для самых активных пользователей (например, за лучший отчет о расходах за месяц).\",\n    \"Создание группы в социальных сетях или канала в Telegram с полезным контентом о финансах, где приложение будет основным инструментом для участников.\"\n  ]\n}\n```"
+    }
+   ]
+  }
+ ]
+}

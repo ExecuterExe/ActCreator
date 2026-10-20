@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Эксперимент — АктКреватор{% endblock %}
+{% block content %}
+<span class="eyebrow">Эксперимент · участник {{ run.code }}</span>
+{% set titles = {"pre": "Вопросы перед началом", "task": "Ваша задача и ограничения", "first": "Первые идеи",
+                 "post": "Вопросы после обеих сессий"} %}
+{% if stage == "done" %}
+  <h1>Спасибо!</h1>
+  <p>Все шаги пройдены. Через 2 и 7 дней мы спросим, сделали ли вы первый шаг — это главный результат для нас.</p>
+{% else %}
+  <h1>Что дальше</h1>
+  <ol class="hint-list">
+    <li>{{ "Пройдено" if stage not in ("pre",) else "Сейчас" }}: вопросы перед началом</li>
+    <li>{{ "Пройдено" if stage not in ("pre", "task") else ("Сейчас" if stage == "task" else "Впереди") }}: задача и ограничения</li>
+    <li>{{ "Пройдено" if stage not in ("pre", "task", "first") else ("Сейчас" if stage == "first" else "Впереди") }}: первые идеи</li>
+    {% for p in range(1, n_arms + 1) %}
+      <li>{% if stage == "post" or (pos and p < pos) %}Пройдено{% elif pos == p %}Сейчас{% else %}Впереди{% endif %}: сессия {{ p }} и карточка решения</li>
+    {% endfor %}
+    <li>{{ "Сейчас" if stage == "post" else "Впереди" }}: вопросы после обеих сессий</li>
+  </ol>
+  {% if stage == "arm" %}
+    <p>Сессия {{ pos }}. Работайте так, как работали бы над своей задачей на самом деле. Время не ограничено, но мы его записываем.</p>
+    <form method="post" action="{{ link }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button type="submit" class="primary">Начать или продолжить сессию {{ pos }}</button>
+    </form>
+  {% elif stage == "card" %}
+    <p><a class="button primary" href="{{ link }}">Заполнить карточку решения · сессия {{ pos }}</a></p>
+  {% else %}
+    <p><a class="button primary" href="{{ link }}">{{ titles[stage] }}</a></p>
+  {% endif %}
+{% endif %}
+{% endblock %}

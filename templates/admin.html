@@ -33,7 +33,7 @@
 
 <section class="panel">
   <h2>Google Sheets</h2>
-  {% if rs.config_error %}<p class="error">Настройки Google не читаются: {{ rs.config_error }}.</p>{% endif %}
+  {% if rs.config_error %}<p class="error">Ошибка в настройках Google: {{ rs.config_error }}.</p>{% endif %}
   {% if not rs.enabled %}
     <p class="muted">Не подключены: нет переменных APPS_SCRIPT_URL и APPS_SCRIPT_TOKEN (или GOOGLE_SHEETS_ID и GOOGLE_SERVICE_ACCOUNT_JSON). Данные остаются только в базе сервера. Как подключить — README, раздел «Данные исследования».</p>
   {% else %}

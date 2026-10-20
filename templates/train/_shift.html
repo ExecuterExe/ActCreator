@@ -3,11 +3,15 @@
    Только новая форма — узел честно остаётся на той же линии. Нет данных — карточка без схемы. #}
 {% set real = v.kind == "механизм" %}
 {% set same = v.kind in ("форма", "нет") %}
+{% set partial = v.kind == "частично" %}
+{% set o = v.outcome %}
 <section class="shift {{ 'shift--real' if real else ('shift--same' if same else '') }}" aria-labelledby="shift-{{ v.id }}">
   <span class="eyebrow">{{ ui("UI-179", n=v.n) }}</span>
   <h2 class="shift__title" id="shift-{{ v.id }}">
     {% if real %}<span class="tag tag--shift">Сдвиг механизма</span>
+    {% elif partial %}<span class="tag tag--rare">Частичный сдвиг</span>
     {% elif same %}<span class="tag tag--same">Та же ветка</span>
+    {% elif o %}<span class="tag">Вывод не сделан</span>
     {% else %}<span class="tag">Разбор недоступен</span>{% endif %}
   </h2>
   {% if v.kind %}
@@ -34,7 +38,7 @@
       </div>
       {% if v.from_text %}
       <div class="shift__node">
-        <span class="caption">{{ "Было" if real else "Тот же принцип, что у" }}{% if v.from_family %} · {{ v.from_family }}{% endif %}</span>
+        <span class="caption">{{ "Было" if real or partial else "Тот же принцип, что у" }}{% if v.from_family %} · {{ v.from_family }}{% endif %}</span>
         <div class="shift__from">{{ v.from_mechanism or v.from_text }}</div>
         <div class="muted shift__quote">«{{ v.from_text }}»</div>
       </div>
@@ -42,8 +46,38 @@
     </div>
   </div>
   {% endif %}
-  {% if v.verdict %}<p class="shift__why">{{ v.verdict }}</p>
+  {% if o %}
+    {# До → После (19.10): что повторялось, какой способ у новой идеи, что он открывает и чем рискует, вывод #}
+    <div class="before-after">
+      {% if o.before %}
+        <div class="before-after__col">
+          <span class="caption">До</span>
+          {% if o.before.lever %}
+            <p>Повторялся способ — <b>{{ o.before.lever }}</b>: {{ o.before.why }}.</p>
+            {% if o.before.examples %}<p class="muted">Видно по идеям: {% for e in o.before.examples %}«{{ e }}»{{ ", " if not loop.last else "." }}{% endfor %}</p>{% endif %}
+            {% if o.before.limit %}<p class="muted">Чем ограничен этот путь: {{ o.before.limit }}</p>{% endif %}
+          {% else %}
+            <p>Ваши первые идеи:</p>
+            <ul class="hint-list">{% for i in o.before.ideas %}<li>«{{ i.text }}» — {{ i.lever or "способ по описанию не ясен" }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+      {% endif %}
+      {% if o.after %}
+        <div class="before-after__col">
+          <span class="caption">После</span>
+          <p>Новая идея{% if o.after.levers %} — <b>{{ o.after.levers|join(" + ") }}</b>{% endif %}: {{ o.after.driver }}.</p>
+          {% if o.after.differs %}<p class="muted">Чем отличается: {{ o.after.differs }}</p>{% endif %}
+          {% if o.after.opens %}<p class="muted">Что это открывает: {{ o.after.opens }}</p>{% endif %}
+          {% if o.after.risk or o.after.condition %}<p class="muted">Новые риски и допущения: {% if o.after.risk %}{{ o.after.risk }}{{ "" if o.after.risk.endswith(".") else "." }} {% endif %}{% if o.after.condition %}Сработает, если {{ o.after.condition[:1].lower() ~ o.after.condition[1:] }}.{% endif %}</p>{% endif %}
+          {% if o.after.goal_kept is false %}<p class="muted">Цель: идея уходит от исходной цели задачи.</p>{% endif %}
+        </div>
+      {% endif %}
+      {% if o.constraints %}<p class="callout callout--risk">Проверьте ограничения: {{ o.constraints|join("; ") }}. Точнее ресурсы оценим на шаге выбора.</p>{% endif %}
+      <p class="shift__why"><b>Вывод: {{ o.title|lower }}.</b> {{ o.conclusion }}</p>
+    </div>
+  {% elif v.verdict %}<p class="shift__why">{{ v.verdict }}</p>
   {% elif v.explanation %}<p class="shift__why">{{ v.explanation }}</p>{% endif %}
+  {% if v.confidence %}<p class="muted">Уверенность в выводе: {{ {"high": "высокая", "medium": "средняя", "low": "низкая — идея описана скупо, вывод может измениться, если её уточнить"}[v.confidence] }}.</p>{% endif %}
   {% set sg = v.surgery or {} %}
   {% if sg.dims %}
     {# Хирургия идеи: все измерения детектора — что сменилось и что осталось прежним (только разбор ИИ) #}
@@ -80,6 +114,6 @@
       <p class="muted surgery__note">Разбор ИИ по каждой идее отдельно. Совпадают ли части по смыслу, здесь не оценивается — это видно в строках выше.</p>
     </details>
   {% endif %}
-  {% if same %}<p class="muted shift__advice">Это не ошибка — так работает привычка. Чтобы свернуть с ветки, поменяйте то, за счёт чего клиент принимает решение, а не слова.</p>{% endif %}
+  {% if same and not o %}<p class="muted shift__advice">Это не ошибка — так работает привычка. Чтобы свернуть с ветки, поменяйте то, за счёт чего клиент принимает решение, а не слова.</p>{% endif %}
   {% if risk %}<p class="callout callout--risk shift__advice"><span class="caption">Ещё проверить</span><br>{{ risk }}</p>{% endif %}
 </section>

@@ -20,11 +20,11 @@ def kept_ai(system, user):
         if "обложк" in user.split("Новая идея:")[-1]:
             return json.dumps({"new_driver": "уверенность в стиле", "new_barrier": "неопределённость",
                                "shift": "механизм", "changed": ["источник ценности", "чепуха"],
-                               "kept": ["аудитория", "источник ценности"], "same_as": None,
+                               "kept": ["аудитория", "источник ценности"], "same_as": None, "confidence": "high",
                                "explanation": "Теперь редактор может оценить работу до заказа."}, ensure_ascii=False)
         return json.dumps({"new_driver": "выгода", "new_barrier": "цена",
                            "shift": "форма", "changed": ["механизм", "момент"], "kept": ["ресурсы"], "same_as": 1,
-                           "explanation": "Принцип тот же — выгода."}, ensure_ascii=False)
+                           "confidence": "high", "explanation": "Принцип тот же — выгода."}, ensure_ascii=False)
     return contract_ai(system, user)
 
 

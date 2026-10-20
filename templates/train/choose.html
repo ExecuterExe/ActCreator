@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Выбор решения — АктКреватор{% endblock %}
+{% block content %}
+{% include "train/_steps.html" %}
+<span class="eyebrow">Выбор решения</span>
+<h1>Какой вариант вы будете делать</h1>
+<div class="panel task-card"><span class="caption">Задача</span><p class="task-card__text">{{ task_data.text }}</p>
+  {% if task_data.goal %}<p class="muted">Цель: {{ task_data.goal }}</p>{% endif %}</div>
+<p class="muted">Ваша первая идея и все версии — рядом. Для каждой: за счёт чего работает, укладывается ли в ваши ресурсы,
+  ведёт ли к цели и на каком допущении держится. Оценки предварительные, выбираете вы.</p>
+
+{% if advice %}
+  <div class="callout callout--process">
+    {% if advice.first_strong %}
+      <p><b>Ваша первая идея уже сильная по выполнимости и связи с целью.</b> Менять её ради новизны не обязательно — новизна сама по себе не делает вариант лучше.</p>
+    {% else %}
+      <p><b>По ресурсам и цели сильнее всего выглядит: «{{ advice.best.text }}».</b> Реализуемость — {{ advice.best.feasibility }}.</p>
+    {% endif %}
+    {% if advice.novel_risky %}
+      <p class="muted">Самый новый по механизму — «{{ advice.novel_risky.text }}», но реализуемость у него {{ advice.novel_risky.feasibility }}. Можно взять его механизм и упростить исполнение под ваши ресурсы — или выбрать более выполнимый вариант.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+<form method="post" data-busy="Сохраняем выбор…">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <fieldset>
+    <legend>Какой вариант вы выбираете?</legend>
+    {% if errors.chosen %}<p class="error" role="alert">{{ errors.chosen }}</p>{% endif %}
+    {% for v in candidates %}
+      <label class="panel">
+        <input type="radio" name="chosen" value="{{ v.id }}" {% if values.chosen == v.id|string %}checked{% endif %}>
+        <span class="caption">{{ v.label }}{% if v.shift_kind == "механизм" %} · сдвиг механизма{% elif v.shift_kind == "частично" %} · частичный сдвиг{% elif v.shift_kind %} · та же ветка{% endif %}</span>
+        <span style="display:block;font-weight:700;margin:4px 0">{{ v.text }}</span>
+        {% if v.mechanism %}<span class="muted" style="display:block">Работает за счёт: {{ v.mechanism }}</span>{% endif %}
+        {% if v.shift_explanation %}<span class="muted" style="display:block">Чем отличается от первых идей: {{ v.shift_explanation }}{% if v.shift_confidence == "low" %} (уверенность низкая){% endif %}</span>{% endif %}
+        <span style="display:block">Реализуемость: {{ v.feasibility or "не определена" }}{% if v.novelty %} · новизна механизма: {{ v.novelty }}{% endif %}</span>
+        {% for line in v.lines %}<span class="muted" style="display:block">{{ line }}</span>{% endfor %}
+        {% if v.assumption %}<span class="muted" style="display:block">Держится на допущении: сработает, если {{ v.assumption[:1].lower() ~ v.assumption[1:] }}</span>{% endif %}
+        {% if v.overlap %}<span class="muted" style="display:block">Возможно, похоже на ответ обычного чат-бота: «{{ v.overlap.text }}» — сверка автоматическая и ненадёжная, сравните сами.</span>{% endif %}
+      </label>
+    {% endfor %}
+  </fieldset>
+  <label>Почему этот вариант, а не другие? Одной фразой — с учётом сроков и ресурсов
+    <textarea name="why" rows="2" maxlength="300">{{ values.why or "" }}</textarea></label>
+  {% if errors.why %}<p class="error">{{ errors.why }}</p>{% endif %}
+  <fieldset>
+    <legend>{{ ui("UI-201").split("?")[0] }}?</legend>
+    <div class="choices-inline">{% for o in wow %}<label><input type="radio" name="wow" value="{{ o }}" {% if values.wow == o %}checked{% endif %}> {{ o }}</label>{% endfor %}</div>
+    {% if errors.wow %}<p class="error">{{ errors.wow }}</p>{% endif %}
+  </fieldset>
+  <div class="actions">
+    <button type="submit" name="action" value="check" class="primary">Выбрать и составить проверку на 48 часов</button>
+    <button type="submit" name="action" value="premortem">Сначала проверить на прочность (≈ 3 минуты)</button>
+    <span class="busy-note" aria-live="polite"></span>
+  </div>
+  <p class="muted">Проверка на прочность полезна, если у варианта реализуемость не высокая или вы сомневаетесь в допущении: вы назовёте риски сами, а затем ИИ добавит те, что вы не назвали.</p>
+</form>
+{% endblock %}

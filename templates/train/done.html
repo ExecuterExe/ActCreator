@@ -3,6 +3,7 @@
 {% block content %}
 <span class="eyebrow">Сессия завершена</span>
 <h1>Итог тренировки</h1>
+{% if flags.lab_run %}<p class="callout callout--process"><a class="button primary" href="{{ url_for('lab.hub', rid=flags.lab_run) }}">Вернуться к эксперименту: карточка решения</a></p>{% endif %}
 {% if final %}
   <div class="panel task-card reveal">
     <span class="caption">Ваша идея</span>
@@ -14,7 +15,10 @@
 {% if exp %}
   <div class="callout callout--risk reveal-3">
     <span class="caption">Следующий тест</span>
-    <p><b>План проверки:</b> {{ exp.plan }} (до {{ ru_date(exp.due) }}).</p>
+    {% if exp.hypothesis %}<p><b>Проверяем:</b> {{ exp.hypothesis }}{% if exp.audience %} — на ком: {{ exp.audience }}{% endif %}.</p>{% endif %}
+    <p><b>Шаг:</b> {{ exp.plan }} (до {{ ru_date(exp.due) }}).</p>
+    {% if (flags.check_plan or {}).today %}<p><b>Сегодня:</b> {{ flags.check_plan.today }}.</p>{% endif %}
+    {% if exp.success_signal %}<p><b>В пользу идеи:</b> {{ exp.success_signal }}. <b>Пересмотреть, если:</b> {{ exp.fail_signal }}.</p>{% endif %}
     <p>{{ ui("UI-125") }}</p>
   </div>
 {% elif final %}

@@ -53,6 +53,11 @@ const code = fs.readFileSync(path.join(__dirname, "Code.gs"), "utf8");
 vm.runInContext(code, context);
 const post = obj => JSON.parse(vm.runInContext("doPost", context)({ postData: { contents: JSON.stringify(obj) } }).s);
 
+// открытие URL в браузере: «скрипт на месте», без имени таблицы и данных
+const got = JSON.parse(vm.runInContext("doGet", context)({}).s);
+assert.strictEqual(got.ok, true);
+assert.strictEqual(JSON.stringify(got).includes("Тест"), false, "doGet не раскрывает таблицу");
+
 // пароль-заглушка не пускает никого, даже с «правильным» токеном
 assert.strictEqual(post({ token: "ЗАМЕНИТЕ-НА-ДЛИННЫЙ-СЛУЧАЙНЫЙ-ПАРОЛЬ", action: "ping" }).ok, false);
 const patched = code.replace("const TOKEN = 'ЗАМЕНИТЕ-НА-ДЛИННЫЙ-СЛУЧАЙНЫЙ-ПАРОЛЬ';", "const TOKEN = 'секрет';");

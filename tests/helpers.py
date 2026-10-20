@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import llm  # noqa: E402
+import training  # noqa: E402
 from app import create_app  # noqa: E402
 
 CSRF_RE = re.compile(r'name="csrf" value="([0-9a-f]+)"')
@@ -22,13 +23,18 @@ class TrainingCase(unittest.TestCase):
 
     ai_client = None
     full_access = True
+    # Полный путь (оценка, пре-мортем, маршрут) — его проверяют сценарии ниже; короткий путь по умолчанию
+    # проверяют test_lab.py и test_product_flow.py (flow = "short")
+    flow = "full"
 
     def setUp(self):
+        # фоновые расчёты живут в памяти процесса по ключу (вид, id сессии, …), а в каждой новой базе id снова с 1
+        training._PREFETCHED.clear()
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = str(Path(self.tmp.name) / "t.db")
         self.app = create_app({"TESTING": True, "DATABASE": self.db_path, "SECRET_KEY": "t",
                                "AI_CLIENT": self.ai_client or llm.NullClient(),
-                               "FULL_ACCESS": self.full_access})
+                               "FULL_ACCESS": self.full_access, "DEFAULT_FLOW": self.flow})
         self.c = self.app.test_client()
 
     def tearDown(self):

@@ -386,10 +386,12 @@ def create_app(test_config=None):
     import training
 
     import admin
+    import lab
 
     app.register_blueprint(training.bp)
     app.register_blueprint(between.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(lab.bp)  # эксперимент A/B/C — только при ACTKREATOR_LAB=1
     return app
 
 

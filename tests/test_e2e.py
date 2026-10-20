@@ -38,10 +38,14 @@ def contract_ai(system, user):
             return json.dumps({"new_driver": "возможность оценить работу до заказа",
                                "new_barrier": "непонятно, подойдёт ли стиль",
                                "shift": "механизм", "changed": ["механизм", "источник ценности"], "same_as": None,
+                               "confidence": "high", "levers": ["trial"], "goal_kept": True,
+                               "opens": "Редактор оценивает работу к своей книге, а не портфолио вообще.",
+                               "risk": "Нужно угадать стиль книги без брифа.",
                                "explanation": "Раньше клиент получал выгоду, теперь — возможность оценить работу "
                                               "до заказа."}, ensure_ascii=False)
         return ('{"new_driver": "денежная выгода", "new_barrier": "цена", "shift": "форма", "changed": [], '
-                '"same_as": 1, "explanation": "Принцип тот же — выгода."}')
+                '"same_as": 1, "confidence": "high", "levers": ["price"], "goal_kept": true, '
+                '"explanation": "Принцип тот же — выгода."}')
     if "через три разные модели" in system:
         return json.dumps({
             "system": {"barrier": "Портфолио не показывает, подойдёт ли стиль к конкретной книге.",
@@ -74,6 +78,18 @@ def contract_ai(system, user):
              "severity": 2}]}, ensure_ascii=False)
     if "Ты судья" in system:
         return '{"verdict": "ослаблено", "basis": "аргумент", "reason": "Довод есть, но не проверен."}'
+    if "Найди общее в первых идеях" in system:  # Р16 v2, что общего у первых идей (19.10)
+        # все три идеи — ценовое поощрение, но модель не уверена («medium»): колея возможна, не установлена —
+        # обязательной «смены механизма» нет, задание выбирают правила Д0–Д5; полная колея — test_product_flow
+        return json.dumps({"ideas": [
+            {"result": "заказ", "tool": tool, "because": "издательство закажет, потому что дешевле", "lever": "price",
+             "clear": True, "missing": ""} for tool in ("скидка 10%", "скидка 20%", "промокод", "скидка")],
+            "limit": "", "confidence": "medium"}, ensure_ascii=False)
+    if "Составь план самой дешёвой проверки" in system:  # Р5 v2, план проверки за 48 часов (18.10)
+        return json.dumps({"step": "Отправить 5 писем с эскизом редакторам", "success": "Ответил хотя бы один",
+                           "fail": "Ни одного ответа за неделю"}, ensure_ascii=False)
+    if "ответы обычного чат-бота на ту же задачу" in system:  # Р15, сверка с чат-ботом (17.10)
+        return '{"same": null, "explanation": "У чат-бота — профиль и скидки, а здесь образец работы под книгу."}'
     return "{}"
 
 
